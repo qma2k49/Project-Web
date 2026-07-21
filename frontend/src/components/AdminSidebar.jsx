@@ -15,8 +15,9 @@ const navItems = [
   { id: "leagues", label: "Giải đấu", icon: Trophy },
   { id: "teams", label: "Đội bóng", icon: Users },
   { id: "stadiums", label: "Sân vận động", icon: Building2 },
-  { id: "personnel", label: "Nhân sự", icon: UserCheck },
+  { id: "personnel", label: "Cầu thủ / Huấn luyện viên", icon: UserCheck },
   { id: "live", label: "Điều khiển trực tiếp", icon: Radio },
+  { id: "predictions", label: "Dự đoán", icon: Radio },
 ];
 
 const AdminSidebar = ({ activeTab = "dashboard", onTabChange }) => {

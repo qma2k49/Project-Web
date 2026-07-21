@@ -55,6 +55,11 @@ export const fetchTeams = async () => {
   return res.data?.teams || res.data?.data || res.data;
 };
 
+export const updateTeam = async (teamId, teamData) => {
+  const res = await api.put(`/teams/${teamId}`, teamData);
+  return res.data;
+};
+
 export const fetchStadiums = async () => {
   const res = await api.get("/stadiums");
   return res.data?.data || res.data;

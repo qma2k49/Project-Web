@@ -7,8 +7,15 @@ const teamSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    city: { type: String, default: "" },
+    country: { type: String, default: "" },
+    homeStadium: { type: String, default: "" },
+    coachName: { type: String, default: "" },
+    coach: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Coach',
+    },
     logo: { type: String },
-    coach: { type: mongoose.Schema.Types.ObjectId, ref: 'Coach' },
     foundedYear: { type: Number },
     stadium: { type: mongoose.Schema.Types.ObjectId, ref: 'Stadium' }
 }, { timestamps: true });

@@ -3,7 +3,13 @@ import PersonModel from '../models/person.model.js';
 export const getPersons = async (req, res) => {
   try {
     const { role } = req.query;
-    const filter = role ? { role } : {};
+    const normalizedRole = role ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase() : null;
+    const filter = normalizedRole
+      ? {
+          $or: [{ role: normalizedRole }, { kind: normalizedRole }],
+        }
+      : {};
+
     const persons = await PersonModel.find(filter).populate('teamId');
     res.status(200).json(persons);
   } catch (error) {

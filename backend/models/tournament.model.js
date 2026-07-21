@@ -12,6 +12,8 @@ const tournamentSchema = new mongoose.Schema({
         enum: ['PENDING', 'ONGOING', 'COMPLETED'],
         default: 'PENDING'
     },
+    startDate: { type: Date },
+    endDate: { type: Date },
 }, { timestamps: true });
 
 const TournamentModel = mongoose.model('Tournament', tournamentSchema);

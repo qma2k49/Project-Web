@@ -1,18 +1,18 @@
 import { TeamModel } from '../models/team.model.js';
 
 const defaultSeedTeams = [
-  { name: "Hà Nội FC", shortName: "HNFC", logo: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=50&auto=format&fit=crop&q=80" },
-  { name: "Viettel FC", shortName: "VTL", logo: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=50&auto=format&fit=crop&q=80" },
-  { name: "TP.HCM FC", shortName: "HCMC", logo: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?w=50&auto=format&fit=crop&q=80" },
-  { name: "SHB Đà Nẵng", shortName: "DNG", logo: "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=50&auto=format&fit=crop&q=80" },
-  { name: "Thép Xanh Nam Định", shortName: "NDH", logo: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=50&auto=format&fit=crop&q=80" },
-  { name: "Hải Phòng FC", shortName: "HPG", logo: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=50&auto=format&fit=crop&q=80" },
+    { name: 'Hà Nội FC', shortName: 'HNFC', city: 'Hà Nội', country: 'Việt Nam', homeStadium: 'Sân Hàng Đẫy', coachName: 'Lê Đức Tuấn', logo: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=50&auto=format&fit=crop&q=80' },
+    { name: 'Viettel FC', shortName: 'VTL', city: 'Hà Nội', country: 'Việt Nam', homeStadium: 'Sân Mỹ Đình', coachName: 'Phan Thanh Hùng', logo: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=50&auto=format&fit=crop&q=80' },
+    { name: 'TP.HCM FC', shortName: 'HCMC', city: 'TP. Hồ Chí Minh', country: 'Việt Nam', homeStadium: 'Sân Thống Nhất', coachName: 'Nguyễn Văn Sỹ', logo: 'https://images.unsplash.com/photo-1518091043644-c1d4457512c6?w=50&auto=format&fit=crop&q=80' },
+    { name: 'SHB Đà Nẵng', shortName: 'DNG', city: 'Đà Nẵng', country: 'Việt Nam', homeStadium: 'Sân Hòa Xuân', coachName: 'Trần Minh Chiến', logo: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?w=50&auto=format&fit=crop&q=80' },
+    { name: 'Thép Xanh Nam Định', shortName: 'NDH', city: 'Nam Định', country: 'Việt Nam', homeStadium: 'Sân Nam Định', coachName: 'Vũ Hồng Việt', logo: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=50&auto=format&fit=crop&q=80' },
+    { name: 'Hải Phòng FC', shortName: 'HPG', city: 'Hải Phòng', country: 'Việt Nam', homeStadium: 'Sân Lạch Tray', coachName: 'Chu Đình Nghiêm', logo: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=50&auto=format&fit=crop&q=80' },
 ];
 
 const teamController = {
     createTeam: async (req, res) => {
         try {
-            const { name, shortName, city, country, image } = req.body;
+            const { name, shortName, city, country, homeStadium, image, coach, coachName } = req.body;
 
             const existingTeam = await TeamModel.findOne({ name });
             if (existingTeam) {
@@ -24,6 +24,9 @@ const teamController = {
                 shortName: shortName || name.substring(0, 3).toUpperCase(),
                 city,
                 country,
+                homeStadium,
+                coachName,
+                coach,
                 logo: image
             });
 
@@ -64,7 +67,29 @@ const teamController = {
 
     updateTeam: async (req, res) => {
         try {
-            const updatedTeam = await TeamModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+            const { name, shortName, city, country, homeStadium, coachName, coach, image } = req.body;
+
+            if (name) {
+                const duplicateTeam = await TeamModel.findOne({ name, _id: { $ne: req.params.id } });
+                if (duplicateTeam) {
+                    return res.status(400).json({ message: 'Tên đội bóng đã tồn tại!' });
+                }
+            }
+
+            const updatedTeam = await TeamModel.findByIdAndUpdate(
+                req.params.id,
+                {
+                    ...(name !== undefined && { name }),
+                    ...(shortName !== undefined && { shortName }),
+                    ...(city !== undefined && { city }),
+                    ...(country !== undefined && { country }),
+                    ...(homeStadium !== undefined && { homeStadium }),
+                    ...(coachName !== undefined && { coachName }),
+                    ...(coach !== undefined && { coach }),
+                    ...(image !== undefined && { logo: image }),
+                },
+                { new: true }
+            );
 
             if (!updatedTeam) {
                 return res.status(404).json({ message: 'Không tìm thấy đội bóng!' });

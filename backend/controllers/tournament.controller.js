@@ -1,9 +1,5 @@
 import TournamentModel from '../models/tournament.model.js';
 
-const defaultTournaments = [
-  { name: "V.League 1 - 2026", season: "2026", type: "LEAGUE", status: "ONGOING" },
-  { name: "Cúp Quốc Gia 2026", season: "2026", type: "CUP", status: "PENDING" },
-];
 
 export const getTournaments = async (req, res) => {
   try {
