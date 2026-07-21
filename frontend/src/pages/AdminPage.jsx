@@ -1,26 +1,32 @@
 import React, { useState, useEffect } from "react";
-import AdminSidebar from "../components/AdminSidebar";
-import AdminHeader from "../components/AdminHeader";
-import StatCard from "../components/StatCard";
-import OngoingMatches from "../components/OngoingMatches";
-import RecentActivity from "../components/RecentActivity";
-import CreateMatchModal from "../components/CreateMatchModal";
-import LiveControlDrawer from "../components/LiveControlDrawer";
-import ExportStatsModal from "../components/ExportStatsModal";
-import { fetchDashboardOverview, fetchPersons, updateTeam } from "../api";
-import { Download, Plus, Trophy, Tv, Users, Cloud, RefreshCw, Search, Pencil } from "lucide-react";
-import { Modal, message, Input, Form, Select } from "antd";
+import AdminSidebar from "../components/layout/AdminSidebar";
+import AdminHeader from "../components/layout/AdminHeader";
+import StatCard from "../components/dashboard/StatCard";
+import OngoingMatches from "../components/dashboard/OngoingMatches";
+import RecentActivity from "../components/dashboard/RecentActivity";
+import CreateMatchModal from "../components/admin/modals/CreateMatchModal";
+import LiveControlDrawer from "../components/admin/modals/LiveControlDrawer";
+import ExportStatsModal from "../components/admin/modals/ExportStatsModal";
+import { fetchDashboardOverview, fetchPersons, updateTeam, createStadium, updateStadium, createPerson, updatePerson } from "../api";
+import { Download, Plus, Trophy, Tv, Users, Cloud, RefreshCw, Search, Pencil, Upload } from "lucide-react";
+import { Modal, message, Input } from "antd";
+import { LeaguesView, TeamsView, StadiumsView, PersonnelView, LiveControlView, PageHeader } from "../components/admin";
+import TeamEditModal from "../components/admin/modals/TeamEditModal";
+import StadiumModal from "../components/admin/modals/StadiumModal";
+import PersonModal from "../components/admin/modals/PersonModal";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [stadiumSearchTerm, setStadiumSearchTerm] = useState("");
   const [data, setData] = useState({
     matches: [],
     tournaments: [],
     teams: [],
     stadiums: [],
     coaches: [],
+    players: [],
   });
 
   // Ant Design Popup Modals & Drawers visibility state
@@ -29,6 +35,33 @@ const AdminPage = () => {
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [isEditTeamModalOpen, setIsEditTeamModalOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null);
+  const [isStadiumModalOpen, setIsStadiumModalOpen] = useState(false);
+  const [editingStadium, setEditingStadium] = useState(null);
+  const [stadiumForm, setStadiumForm] = useState({
+    name: "",
+    capacity: "",
+    builtYear: "",
+    city: "",
+    country: "",
+    image: "",
+  });
+  const [uploadingStadiumImage, setUploadingStadiumImage] = useState(false);
+  const [isPersonModalOpen, setIsPersonModalOpen] = useState(false);
+  const [editingPerson, setEditingPerson] = useState(null);
+  const [personForm, setPersonForm] = useState({
+    name: "",
+    kind: "Player",
+    nationality: "",
+    dateOfBirth: "",
+    avatar: "",
+    position: "",
+    jerseyNumber: "",
+    currentTeam: "",
+    careerSummary: "",
+  });
+  const [uploadingPersonImage, setUploadingPersonImage] = useState(false);
+  const [playerSearchTerm, setPlayerSearchTerm] = useState("");
+  const [coachSearchTerm, setCoachSearchTerm] = useState("");
   const [editTeamForm, setEditTeamForm] = useState({
     name: "",
     shortName: "",
@@ -37,17 +70,21 @@ const AdminPage = () => {
     homeStadium: "",
     coach: null,
     coachName: "",
+    logo: "",
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const loadDataFromDB = async () => {
     setLoading(true);
-    const [dbData, coachesData] = await Promise.all([
+    const [dbData, playersData, coachesData] = await Promise.all([
       fetchDashboardOverview(),
+      fetchPersons("Player"),
       fetchPersons("Coach"),
     ]);
 
     const nextData = {
       ...dbData,
+      players: Array.isArray(playersData) ? playersData : [],
       coaches: Array.isArray(coachesData) ? coachesData : [],
     };
 
@@ -81,6 +118,7 @@ const AdminPage = () => {
       homeStadium: team?.homeStadium || team?.stadium?.name || "",
       coach: selectedCoachId,
       coachName: team?.coachName || "",
+      logo: team?.logo || "",
     });
     setIsEditTeamModalOpen(true);
   };
@@ -89,16 +127,170 @@ const AdminPage = () => {
     if (!editingTeam) return;
 
     try {
-      const response = await updateTeam(editingTeam._id, editTeamForm);
+      const payload = {
+        ...editTeamForm,
+        logo: editTeamForm.logo || editingTeam?.logo || "",
+        image: editTeamForm.logo || editingTeam?.logo || "",
+      };
+
+      if (!payload.logo) {
+        delete payload.logo;
+        delete payload.image;
+      }
+
+      const response = await updateTeam(editingTeam._id, payload);
       message.success("Cập nhật thông tin đội bóng thành công!");
       setData((prev) => ({
         ...prev,
         teams: prev.teams.map((team) => (team._id === editingTeam._id ? { ...team, ...response.team } : team)),
       }));
+
+      if (response?.team?.logo) {
+        setEditTeamForm((prev) => ({ ...prev, logo: response.team.logo }));
+      }
       setIsEditTeamModalOpen(false);
       setEditingTeam(null);
     } catch (error) {
       message.error(error?.response?.data?.message || "Không thể cập nhật đội bóng");
+    }
+  };
+
+  const handleTeamImageUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      setUploadingImage(true);
+      const response = await fetch("http://localhost:3000/api/teams/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.message || "Không thể tải ảnh lên");
+      }
+
+      setEditTeamForm((prev) => ({ ...prev, logo: result.imageUrl }));
+      message.success("Tải ảnh logo thành công");
+    } catch (error) {
+      message.error(error?.message || "Không thể tải ảnh lên");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const openStadiumModal = (stadium = null) => {
+    setEditingStadium(stadium);
+    setStadiumForm({
+      name: stadium?.name || "",
+      capacity: stadium?.capacity || "",
+      builtYear: stadium?.builtYear || "",
+      city: stadium?.city || "",
+      country: stadium?.country || "",
+      image: stadium?.image || "",
+    });
+    setIsStadiumModalOpen(true);
+  };
+
+  const handleStadiumSubmit = async () => {
+    try {
+      const payload = {
+        ...stadiumForm,
+        capacity: Number(stadiumForm.capacity),
+        builtYear: Number(stadiumForm.builtYear),
+      };
+
+      const response = editingStadium
+        ? await updateStadium(editingStadium._id, payload)
+        : await createStadium(payload);
+
+      message.success(editingStadium ? "Cập nhật sân vận động thành công" : "Thêm sân vận động thành công");
+      await loadDataFromDB();
+      setIsStadiumModalOpen(false);
+      setEditingStadium(null);
+    } catch (error) {
+      message.error(error?.response?.data?.message || "Không thể lưu sân vận động");
+    }
+  };
+
+  const handleStadiumImageUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      setUploadingStadiumImage(true);
+      const response = await fetch("http://localhost:3000/api/teams/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.message || "Không thể tải ảnh lên");
+      setStadiumForm((prev) => ({ ...prev, image: result.imageUrl }));
+      message.success("Tải ảnh sân vận động thành công");
+    } catch (error) {
+      message.error(error?.message || "Không thể tải ảnh lên");
+    } finally {
+      setUploadingStadiumImage(false);
+    }
+  };
+
+  const openPersonModal = (person = null) => {
+    setEditingPerson(person);
+    setPersonForm({
+      name: person?.name || "",
+      kind: person?.kind || "Player",
+      nationality: person?.nationality || "",
+      dateOfBirth: person?.dateOfBirth ? new Date(person.dateOfBirth).toISOString().split("T")[0] : "",
+      avatar: person?.avatar || "",
+      position: person?.position || "",
+      jerseyNumber: person?.jerseyNumber || "",
+      currentTeam: person?.currentTeam?._id || person?.currentTeam || "",
+      careerSummary: person?.careerSummary || "",
+    });
+    setIsPersonModalOpen(true);
+  };
+
+  const handlePersonSubmit = async () => {
+    try {
+      const payload = {
+        ...personForm,
+        kind: personForm.kind,
+        currentTeam: personForm.currentTeam || undefined,
+        jerseyNumber: personForm.jerseyNumber ? Number(personForm.jerseyNumber) : undefined,
+      };
+
+      const response = editingPerson
+        ? await updatePerson(editingPerson._id, payload)
+        : await createPerson(payload);
+
+      message.success(editingPerson ? "Cập nhật nhân sự thành công" : "Thêm nhân sự thành công");
+      await loadDataFromDB();
+      setIsPersonModalOpen(false);
+      setEditingPerson(null);
+    } catch (error) {
+      message.error(error?.response?.data?.message || "Không thể lưu nhân sự");
+    }
+  };
+
+  const handlePersonImageUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      setUploadingPersonImage(true);
+      const response = await fetch("http://localhost:3000/api/teams/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result?.message || "Không thể tải ảnh lên");
+      setPersonForm((prev) => ({ ...prev, avatar: result.imageUrl }));
+      message.success("Tải ảnh nhân sự thành công");
+    } catch (error) {
+      message.error(error?.message || "Không thể tải ảnh lên");
+    } finally {
+      setUploadingPersonImage(false);
     }
   };
 
@@ -122,10 +314,33 @@ const AdminPage = () => {
   const stadiumsCount = data.stadiums.length;
   const isLeaguesView = activeTab === "leagues";
   const isTeamsView = activeTab === "teams";
+  const isStadiumsView = activeTab === "stadiums";
+  const isLiveControlView = activeTab === "live";
 
   const filteredTeams = (data.teams || []).filter((team) => {
     const keyword = searchTerm.toLowerCase();
     return !keyword || [team.name, team.shortName, team.city, team.homeStadium, team.coachName]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(keyword));
+  });
+
+  const filteredStadiums = (data.stadiums || []).filter((stadium) => {
+    const keyword = stadiumSearchTerm.toLowerCase();
+    return !keyword || [stadium.name, stadium.city, stadium.country]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(keyword));
+  });
+
+  const filteredPlayers = (data.players || []).filter((person) => {
+    const keyword = playerSearchTerm.toLowerCase();
+    return !keyword || [person.name, person.nationality, person.position, person?.currentTeam?.name]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(keyword));
+  });
+
+  const filteredCoaches = (data.coaches || []).filter((person) => {
+    const keyword = coachSearchTerm.toLowerCase();
+    return !keyword || [person.name, person.nationality, person?.currentTeam?.name, person.careerSummary]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(keyword));
   });
@@ -136,64 +351,114 @@ const AdminPage = () => {
     return (
       <div className="flex min-h-screen bg-[#f8faf9] text-slate-900 font-sans antialiased">
         <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
-
         <div className="flex-1 flex flex-col min-w-0">
           <AdminHeader title="Quản lý giải đấu" />
-
-          <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-                  Danh sách giải đấu
-                </h1>
-                <p className="text-sm text-slate-500 font-medium mt-1">
-                  Quản lý các giải đấu đang hoạt động và theo dõi thông tin ngắn gọn của từng giải.
-                </p>
-              </div>
-              <button
-                onClick={() => setActiveTab("dashboard")}
-                className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
-              >
-                Quay lại tổng quan
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {loading ? (
-                <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-gray-200 bg-white p-10 text-center text-slate-500">
-                  Đang tải dữ liệu giải đấu...
-                </div>
-              ) : data.tournaments.length === 0 ? (
-                <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-gray-200 bg-white p-10 text-center text-slate-500">
-                  Chưa có giải đấu nào trong cơ sở dữ liệu.
-                </div>
-              ) : (
-                data.tournaments.map((tournament) => (
-                  <div key={tournament._id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h2 className="text-lg font-bold text-slate-900">{tournament.name}</h2>
-                        <p className="text-sm text-slate-500">{tournament.season || "Mùa giải"}</p>
-                      </div>
-                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                        {tournament.status || "Đang hoạt động"}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 text-sm text-slate-600 space-y-1">
-                      <p>• Tổng trận đấu: {data.matches.filter((match) => {
-                        const tournamentId = typeof match.tournamentId === "object" ? match.tournamentId?._id : match.tournamentId;
-                        return tournamentId === tournament._id;
-                      }).length}</p>
-                      <p>• Số đội tham gia: {data.teams.length}</p>
-                      <p>• Sân vận động hỗ trợ: {data.stadiums.length}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </main>
+          <LeaguesView
+            loading={loading}
+            tournaments={data.tournaments}
+            matches={data.matches}
+            teams={data.teams}
+            stadiums={data.stadiums}
+            onBack={() => setActiveTab("dashboard")}
+          />
         </div>
+      </div>
+    );
+  }
+
+  if (isLiveControlView) {
+    return (
+      <div className="flex min-h-screen bg-[#f8faf9] text-slate-900 font-sans antialiased">
+        <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <AdminHeader title="Điều khiển trực tiếp" />
+          <LiveControlView
+            loading={loading}
+            matches={data.matches}
+            onOpenLiveControl={handleOpenLiveControl}
+            onBack={() => setActiveTab("dashboard")}
+          />
+        </div>
+
+        <LiveControlDrawer
+          visible={isLiveControlOpen}
+          onClose={() => setIsLiveControlOpen(false)}
+          match={selectedMatch}
+          onEventTriggered={loadDataFromDB}
+        />
+      </div>
+    );
+  }
+
+  if (isStadiumsView) {
+    return (
+      <div className="flex min-h-screen bg-[#f8faf9] text-slate-900 font-sans antialiased">
+        <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+
+        <div className="flex-1 flex flex-col min-w-0">
+          <AdminHeader title="Quản lý sân vận động" />
+          <StadiumsView
+            loading={loading}
+            stadiumSearchTerm={stadiumSearchTerm}
+            onStadiumSearchChange={setStadiumSearchTerm}
+            filteredStadiums={filteredStadiums}
+            onAddStadium={() => openStadiumModal()}
+            onEditStadium={(stadium) => openStadiumModal(stadium)}
+          />
+        </div>
+
+        <StadiumModal
+          visible={isStadiumModalOpen}
+          editingStadium={editingStadium}
+          onCancel={() => {
+            setIsStadiumModalOpen(false);
+            setEditingStadium(null);
+          }}
+          onOk={handleStadiumSubmit}
+          form={stadiumForm}
+          onFieldChange={(field, value) => setStadiumForm((prev) => ({ ...prev, [field]: value }))}
+          onImageUpload={handleStadiumImageUpload}
+          uploadingImage={uploadingStadiumImage}
+        />
+      </div>
+    );
+  }
+
+  if (activeTab === "personnel") {
+    return (
+      <div className="flex min-h-screen bg-[#f8faf9] text-slate-900 font-sans antialiased">
+        <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+
+        <div className="flex-1 flex flex-col min-w-0">
+          <AdminHeader title="Quản lý cầu thủ & HLV" />
+          <PersonnelView
+            loading={loading}
+            playerSearchTerm={playerSearchTerm}
+            coachSearchTerm={coachSearchTerm}
+            onPlayerSearchChange={setPlayerSearchTerm}
+            onCoachSearchChange={setCoachSearchTerm}
+            filteredPlayers={filteredPlayers}
+            filteredCoaches={filteredCoaches}
+            onAddPlayer={() => openPersonModal({ kind: "Player" })}
+            onAddCoach={() => openPersonModal({ kind: "Coach" })}
+            onEditPerson={(person) => openPersonModal(person)}
+          />
+        </div>
+
+        <PersonModal
+          visible={isPersonModalOpen}
+          editingPerson={editingPerson}
+          onCancel={() => {
+            setIsPersonModalOpen(false);
+            setEditingPerson(null);
+          }}
+          onOk={handlePersonSubmit}
+          form={personForm}
+          onFieldChange={(field, value) => setPersonForm((prev) => ({ ...prev, [field]: value }))}
+          onImageUpload={handlePersonImageUpload}
+          uploadingImage={uploadingPersonImage}
+          teams={data.teams}
+        />
       </div>
     );
   }
@@ -207,22 +472,18 @@ const AdminPage = () => {
           <AdminHeader title="Quản lý đội bóng" />
 
           <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-                  Tìm kiếm thông tin đội bóng
-                </h1>
-                <p className="text-sm text-slate-500 font-medium mt-1">
-                  Nhập tên đội, tên viết tắt, thành phố hoặc sân nhà để tra cứu thông tin nhanh.
-                </p>
-              </div>
-              <button
-                onClick={() => setActiveTab("dashboard")}
-                className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
-              >
-                Quay lại tổng quan
-              </button>
-            </div>
+            <PageHeader
+              title="Tìm kiếm thông tin đội bóng"
+              description="Nhập tên đội, tên viết tắt, thành phố hoặc sân nhà để tra cứu thông tin nhanh."
+              action={
+                <button
+                  onClick={() => setActiveTab("dashboard")}
+                  className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
+                >
+                  Quay lại tổng quan
+                </button>
+              }
+            />
 
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <label className="text-sm font-semibold text-slate-700">Tìm đội bóng</label>
@@ -300,80 +561,17 @@ const AdminPage = () => {
           </main>
         </div>
 
-        <Modal
-          title="Chỉnh sửa thông tin đội bóng"
-          open={isEditTeamModalOpen}
+        <TeamEditModal
+          visible={isEditTeamModalOpen}
           onCancel={() => setIsEditTeamModalOpen(false)}
           onOk={handleEditTeamSubmit}
-          okText="Lưu thay đổi"
-          cancelText="Hủy"
-        >
-          <Form layout="vertical" className="mt-3">
-            <Form.Item label="Tên đội">
-              <Input
-                value={editTeamForm.name}
-                onChange={(e) => setEditTeamForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Nhập tên đội bóng"
-              />
-            </Form.Item>
-            <Form.Item label="Tên viết tắt">
-              <Input
-                value={editTeamForm.shortName}
-                onChange={(e) => setEditTeamForm((prev) => ({ ...prev, shortName: e.target.value }))}
-                placeholder="Ví dụ: HNFC"
-              />
-            </Form.Item>
-            <Form.Item label="Thành phố">
-              <Input
-                value={editTeamForm.city}
-                onChange={(e) => setEditTeamForm((prev) => ({ ...prev, city: e.target.value }))}
-                placeholder="Ví dụ: Hà Nội"
-              />
-            </Form.Item>
-            <Form.Item label="Quốc gia">
-              <Input
-                value={editTeamForm.country}
-                onChange={(e) => setEditTeamForm((prev) => ({ ...prev, country: e.target.value }))}
-                placeholder="Ví dụ: Việt Nam"
-              />
-            </Form.Item>
-            <Form.Item label="Sân nhà">
-              <Select
-                showSearch
-                allowClear
-                placeholder="Chọn sân nhà"
-                value={editTeamForm.homeStadium || undefined}
-                onChange={(value) => setEditTeamForm((prev) => ({ ...prev, homeStadium: value || "" }))}
-                options={(data.stadiums || []).map((stadium) => ({
-                  label: stadium.name,
-                  value: stadium.name,
-                }))}
-                filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())}
-              />
-            </Form.Item>
-            <Form.Item label="HLV">
-              <Select
-                showSearch
-                allowClear
-                placeholder="Chọn HLV"
-                value={editTeamForm.coach || undefined}
-                onChange={(value) => {
-                  const selectedCoach = (data.coaches || []).find((coach) => coach._id === value);
-                  setEditTeamForm((prev) => ({
-                    ...prev,
-                    coach: value || null,
-                    coachName: selectedCoach?.name || "",
-                  }));
-                }}
-                options={(data.coaches || []).map((coach) => ({
-                  label: coach.name,
-                  value: coach._id,
-                }))}
-                filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())}
-              />
-            </Form.Item>
-          </Form>
-        </Modal>
+          form={editTeamForm}
+          onFieldChange={(field, value) => setEditTeamForm((prev) => ({ ...prev, [field]: value }))}
+          onImageUpload={handleTeamImageUpload}
+          uploadingImage={uploadingImage}
+          stadiums={data.stadiums}
+          coaches={data.coaches}
+        />
       </div>
   );
 }

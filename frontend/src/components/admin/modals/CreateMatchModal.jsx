@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Modal, Form, Select, DatePicker, InputNumber, message, Button } from "antd";
 import { PlusCircle } from "lucide-react";
-import { createMatch } from "../api";
+import { createMatch } from "../../../api";
 
 const { Option } = Select;
 

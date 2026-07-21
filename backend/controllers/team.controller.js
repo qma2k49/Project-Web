@@ -67,7 +67,7 @@ const teamController = {
 
     updateTeam: async (req, res) => {
         try {
-            const { name, shortName, city, country, homeStadium, coachName, coach, image } = req.body;
+            const { name, shortName, city, country, homeStadium, coachName, coach, image, logo } = req.body;
 
             if (name) {
                 const duplicateTeam = await TeamModel.findOne({ name, _id: { $ne: req.params.id } });
@@ -86,6 +86,7 @@ const teamController = {
                     ...(homeStadium !== undefined && { homeStadium }),
                     ...(coachName !== undefined && { coachName }),
                     ...(coach !== undefined && { coach }),
+                    ...(logo !== undefined && { logo }),
                     ...(image !== undefined && { logo: image }),
                 },
                 { new: true }

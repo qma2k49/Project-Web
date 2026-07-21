@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Drawer, Tag, Button, Form, Select, InputNumber, Input, message } from "antd";
 import { Radio, Trophy, Zap } from "lucide-react";
-import { fetchMatchLineups, fetchPersons, triggerMatchEvent } from "../api";
+import { fetchMatchLineups, fetchPersons, triggerMatchEvent } from "../../../api";
 
 const { Option } = Select;
 

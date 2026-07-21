@@ -65,6 +65,16 @@ export const fetchStadiums = async () => {
   return res.data?.data || res.data;
 };
 
+export const createStadium = async (stadiumData) => {
+  const res = await api.post("/stadiums", stadiumData);
+  return res.data;
+};
+
+export const updateStadium = async (stadiumId, stadiumData) => {
+  const res = await api.put(`/stadiums/${stadiumId}`, stadiumData);
+  return res.data;
+};
+
 export const createMatch = async (matchData, token) => {
   const res = await api.post("/matches", matchData, {
     headers: { Authorization: `Bearer ${token}` },
@@ -86,6 +96,16 @@ export const fetchMatchLineups = async (matchId) => {
 
 export const fetchPersons = async (role) => {
   const res = await api.get(`/persons${role ? `?role=${role}` : ""}`);
+  return res.data;
+};
+
+export const createPerson = async (personData) => {
+  const res = await api.post("/persons", personData);
+  return res.data;
+};
+
+export const updatePerson = async (personId, personData) => {
+  const res = await api.put(`/persons/${personId}`, personData);
   return res.data;
 };
 
