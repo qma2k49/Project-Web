@@ -23,7 +23,6 @@ const AdminPage = () => {
 
   // Ant Design Popup Modals & Drawers visibility state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isLiveControlOpen, setIsLiveControlOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
 
@@ -61,6 +60,73 @@ const AdminPage = () => {
   const matchesCount = data.matches.length;
   const totalTeamsCount = data.teams.length;
   const stadiumsCount = data.stadiums.length;
+  const isLeaguesView = activeTab === "leagues";
+
+  if (isLeaguesView) {
+    return (
+      <div className="flex min-h-screen bg-[#f8faf9] text-slate-900 font-sans antialiased">
+        <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+
+        <div className="flex-1 flex flex-col min-w-0">
+          <AdminHeader title="Quản lý giải đấu" />
+
+          <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+                  Danh sách giải đấu
+                </h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">
+                  Quản lý các giải đấu đang hoạt động và theo dõi thông tin ngắn gọn của từng giải.
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveTab("dashboard")}
+                className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
+              >
+                Quay lại tổng quan
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {loading ? (
+                <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-gray-200 bg-white p-10 text-center text-slate-500">
+                  Đang tải dữ liệu giải đấu...
+                </div>
+              ) : data.tournaments.length === 0 ? (
+                <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-gray-200 bg-white p-10 text-center text-slate-500">
+                  Chưa có giải đấu nào trong cơ sở dữ liệu.
+                </div>
+              ) : (
+                data.tournaments.map((tournament) => (
+                  <div key={tournament._id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-900">{tournament.name}</h2>
+                        <p className="text-sm text-slate-500">{tournament.season || "Mùa giải"}</p>
+                      </div>
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        {tournament.status || "Đang hoạt động"}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 text-sm text-slate-600 space-y-1">
+                      <p>• Tổng trận đấu: {data.matches.filter((match) => {
+                        const tournamentId = typeof match.tournamentId === "object" ? match.tournamentId?._id : match.tournamentId;
+                        return tournamentId === tournament._id;
+                      }).length}</p>
+                      <p>• Số đội tham gia: {data.teams.length}</p>
+                      <p>• Sân vận động hỗ trợ: {data.stadiums.length}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#f8faf9] text-slate-900 font-sans antialiased">
@@ -81,9 +147,6 @@ const AdminPage = () => {
                 Tổng quan hệ thống
                 {loading && <RefreshCw className="w-5 h-5 animate-spin text-emerald-500" />}
               </h1>
-              <p className="text-sm text-slate-500 font-medium mt-1">
-                Dữ liệu trực tiếp kết nối với MongoDB Atlas Server (port 3000).
-              </p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -92,14 +155,7 @@ const AdminPage = () => {
                 className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
               >
                 <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? "animate-spin" : ""}`} />
-                Làm mới CSDL
-              </button>
-              <button
-                onClick={() => setIsExportModalOpen(true)}
-                className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
-              >
-                <Download className="w-4 h-4 text-slate-500" />
-                Xuất thống kê
+                Làm mới
               </button>
               <button
                 onClick={() => setIsCreateModalOpen(true)}
@@ -124,8 +180,6 @@ const AdminPage = () => {
             <StatCard
               title="Tổng số trận đấu"
               value={matchesCount}
-              badgeText={matchesCount > 0 ? "LIVE DB" : "TRỐNG"}
-              badgeType={matchesCount > 0 ? "red" : "neutral"}
               icon={Tv}
               iconBg="bg-emerald-400 text-slate-950"
             />
@@ -183,10 +237,6 @@ const AdminPage = () => {
         onEventTriggered={loadDataFromDB}
       />
 
-      <ExportStatsModal
-        visible={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-      />
     </div>
   );
 };

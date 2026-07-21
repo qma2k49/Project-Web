@@ -74,4 +74,14 @@ export const triggerMatchEvent = async (matchId, eventData, token) => {
   return res.data;
 };
 
+export const fetchMatchLineups = async (matchId) => {
+  const res = await api.get(`/match-lineups/match/${matchId}`);
+  return res.data;
+};
+
+export const fetchPersons = async (role) => {
+  const res = await api.get(`/persons${role ? `?role=${role}` : ""}`);
+  return res.data;
+};
+
 export default api;

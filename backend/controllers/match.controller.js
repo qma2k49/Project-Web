@@ -79,13 +79,18 @@ export const saveLineup = async (req, res) => {
 export const triggerMatchEvent = async (req, res) => {
   try {
     const { matchId } = req.params;
-    const { type, minute, player, team, note } = req.body;
+    const { type, minute, player, team, note, stoppageMinute = 0, personId, outgoingPlayerId, incomingPlayerId } = req.body;
+    const displayMinute = stoppageMinute > 0 ? `${minute}+${stoppageMinute}` : minute;
 
     const newEvent = await MatchEventModel.create({
       matchId,
       eventType: type,
       minute,
-      note: `${player} (${team === 'home' ? 'Đội nhà' : 'Đội khách'}) - ${note || ''}`,
+      stoppageMinute,
+      personId,
+      outgoingPlayerId,
+      incomingPlayerId,
+      note: `${displayMinute} - ${player} (${team === 'home' ? 'Đội nhà' : 'Đội khách'}) - ${note || ''}`,
     });
 
     if (type === 'Goal') {
@@ -93,6 +98,14 @@ export const triggerMatchEvent = async (req, res) => {
       if (match) {
         if (team === 'home') match.homeScore += 1;
         if (team === 'away') match.awayScore += 1;
+        await match.save();
+      }
+    }
+
+    if (type === 'StartHalf') {
+      const match = await MatchModel.findById(matchId);
+      if (match && match.status !== 'LIVE') {
+        match.status = 'LIVE';
         await match.save();
       }
     }

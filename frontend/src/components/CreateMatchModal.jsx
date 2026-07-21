@@ -8,6 +8,7 @@ const { Option } = Select;
 const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams = [], stadiums = [] }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
+  const [selectedHomeTeam, setSelectedHomeTeam] = useState(null);
 
   const handleSubmit = async (values) => {
     try {
@@ -33,6 +34,7 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
       await createMatch(matchData);
       message.success("Đã tạo mới trận đấu thành công vào MongoDB!");
       form.resetFields();
+      setSelectedHomeTeam(null);
       onSuccess && onSuccess();
       onClose && onClose();
     } catch (err) {
@@ -92,7 +94,14 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
             label="Đội nhà"
             rules={[{ required: true, message: "Vui lòng chọn đội nhà!" }]}
           >
-            <Select placeholder="Chọn đội nhà..." size="large">
+            <Select
+              placeholder="Chọn đội nhà..."
+              size="large"
+              onChange={(value) => {
+                setSelectedHomeTeam(value);
+                form.setFieldsValue({ awayTeam: undefined });
+              }}
+            >
               {teams.map((team) => (
                 <Option key={team._id} value={team._id}>
                   {team.name}
@@ -104,14 +113,27 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
           <Form.Item
             name="awayTeam"
             label="Đội khách"
-            rules={[{ required: true, message: "Vui lòng chọn đội khách!" }]}
+            rules={[
+              { required: true, message: "Vui lòng chọn đội khách!" },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value) return Promise.resolve();
+                  if (value === getFieldValue("homeTeam")) {
+                    return Promise.reject(new Error("Đội khách không được trùng với đội nhà!"));
+                  }
+                  return Promise.resolve();
+                },
+              }),
+            ]}
           >
-            <Select placeholder="Chọn đội khách..." size="large">
-              {teams.map((team) => (
-                <Option key={team._id} value={team._id}>
-                  {team.name}
-                </Option>
-              ))}
+            <Select placeholder="Chọn đội khách..." size="large" allowClear>
+              {teams
+                .filter((team) => team._id !== selectedHomeTeam)
+                .map((team) => (
+                  <Option key={team._id} value={team._id}>
+                    {team.name}
+                  </Option>
+                ))}
             </Select>
           </Form.Item>
         </div>

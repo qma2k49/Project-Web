@@ -16,15 +16,19 @@ export const getEventsByMatch = async (req, res) => {
 
 export const createMatchEvent = async (req, res) => {
   try {
-    const { matchId, teamId, personId, minute, eventType, note } = req.body;
+    const { matchId, teamId, personId, outgoingPlayerId, incomingPlayerId, minute, stoppageMinute = 0, eventType, note } = req.body;
+    const displayMinute = stoppageMinute > 0 ? `${minute}+${stoppageMinute}` : minute;
 
     const event = await MatchEventModel.create({
       matchId,
       teamId,
       personId,
+      outgoingPlayerId,
+      incomingPlayerId,
       minute,
+      stoppageMinute,
       eventType,
-      note,
+      note: `${displayMinute} - ${note || ''}`.trim(),
     });
 
     if (eventType === 'Goal' || eventType === 'OwnGoal') {
