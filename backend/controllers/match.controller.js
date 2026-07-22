@@ -11,7 +11,45 @@ export const getMatches = async (req, res) => {
       .populate('refereeId')
       .populate('tournamentId')
       .sort({ createdAt: -1 });
-    res.status(200).json(matches);
+
+    const liveMatchIds = matches.filter(m => m.status === 'LIVE').map(m => m._id);
+    const clockEvents = await MatchEventModel.find({
+      matchId: { $in: liveMatchIds },
+      eventType: { $in: ['StartHalf', 'EndHalf'] }
+    }).sort({ createdAt: -1 });
+
+    const matchesJson = matches.map(m => {
+      const matchObj = m.toObject();
+      if (matchObj.status === 'LIVE') {
+        const eventsForMatch = clockEvents.filter(e => String(e.matchId) === String(matchObj._id));
+        if (eventsForMatch.length > 0) {
+          const latestEvent = eventsForMatch[0];
+          if (latestEvent.eventType === 'StartHalf') {
+            const startTime = new Date(latestEvent.createdAt);
+            const now = new Date();
+            const elapsed = Math.max(0, Math.floor((now - startTime) / 1000));
+            const baseSeconds = (latestEvent.minute - 1) * 60;
+            matchObj.elapsedSeconds = baseSeconds + elapsed;
+            matchObj.clockRunning = true;
+          } else {
+            matchObj.elapsedSeconds = latestEvent.minute * 60;
+            matchObj.clockRunning = false;
+          }
+        } else {
+          matchObj.elapsedSeconds = 0;
+          matchObj.clockRunning = false;
+        }
+      } else if (matchObj.status === 'FINISHED') {
+        matchObj.elapsedSeconds = 90 * 60;
+        matchObj.clockRunning = false;
+      } else {
+        matchObj.elapsedSeconds = 0;
+        matchObj.clockRunning = false;
+      }
+      return matchObj;
+    });
+
+    res.status(200).json(matchesJson);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi lấy danh sách trận đấu', error: error.message });
   }
@@ -27,10 +65,38 @@ export const getMatchById = async (req, res) => {
       .populate('tournamentId');
     if (!match) return res.status(404).json({ message: 'Không tìm thấy trận đấu' });
     
-    const events = await MatchEventModel.find({ matchId: req.params.id }).sort({ minute: -1 });
+    const events = await MatchEventModel.find({ matchId: req.params.id }).sort({ createdAt: -1 });
     const lineup = await MatchLineupModel.find({ matchId: req.params.id }).populate('personId');
 
-    res.status(200).json({ match, events, lineup });
+    const matchObj = match.toObject();
+    if (matchObj.status === 'LIVE') {
+      const clockEvents = events.filter(e => e.eventType === 'StartHalf' || e.eventType === 'EndHalf');
+      if (clockEvents.length > 0) {
+        const latestEvent = clockEvents[0];
+        if (latestEvent.eventType === 'StartHalf') {
+          const startTime = new Date(latestEvent.createdAt);
+          const now = new Date();
+          const elapsed = Math.max(0, Math.floor((now - startTime) / 1000));
+          const baseSeconds = (latestEvent.minute - 1) * 60;
+          matchObj.elapsedSeconds = baseSeconds + elapsed;
+          matchObj.clockRunning = true;
+        } else {
+          matchObj.elapsedSeconds = latestEvent.minute * 60;
+          matchObj.clockRunning = false;
+        }
+      } else {
+        matchObj.elapsedSeconds = 0;
+        matchObj.clockRunning = false;
+      }
+    } else if (matchObj.status === 'FINISHED') {
+      matchObj.elapsedSeconds = 90 * 60;
+      matchObj.clockRunning = false;
+    } else {
+      matchObj.elapsedSeconds = 0;
+      matchObj.clockRunning = false;
+    }
+
+    res.status(200).json({ match: matchObj, events, lineup });
   } catch (error) {
     res.status(500).json({ message: 'Lỗi lấy thông tin chi tiết trận đấu', error: error.message });
   }

@@ -1,5 +1,6 @@
 import React from "react";
 import { Tv, Radio, ArrowUpRight, Database } from "lucide-react";
+import LiveClock from "../admin/LiveClock";
 
 const getTeamDisplayName = (team) => {
   if (!team) return "—";
@@ -113,9 +114,9 @@ const OngoingMatches = ({ matches = [], onLiveControl, loading = false }) => {
                     <td className="py-4 px-4 align-middle">
                       <div className="flex justify-center items-center w-[140px] mx-auto">
                       {isLive ? (
-                        <span className="inline-flex items-center gap-1 font-bold text-rose-600 text-xs bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
+                        <span className="inline-flex items-center gap-1.5 font-bold text-rose-600 text-xs bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-                          TRỰC TIẾP
+                          TRỰC TIẾP • <LiveClock match={match} showIcon={false} />
                         </span>
                       ) : (
                         <span className="font-semibold text-slate-500 text-xs px-2.5 py-1 rounded-full bg-slate-100">

@@ -11,7 +11,7 @@ const matchEventSchema = new mongoose.Schema({
     stoppageMinute: { type: Number, default: 0 },
     eventType: {
         type: String,
-        enum: ['Goal', 'YellowCard', 'RedCard', 'Substitution', 'OwnGoal', 'StartHalf'],
+        enum: ['Goal', 'YellowCard', 'RedCard', 'Substitution', 'OwnGoal', 'StartHalf', 'EndHalf'],
         required: true
     },
     note: { type: String }

@@ -1,17 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { Drawer, Tag, Button, Form, Select, InputNumber, Input, message } from "antd";
 import { Radio, Trophy, Zap } from "lucide-react";
-import { fetchMatchLineups, fetchPersons, triggerMatchEvent } from "../../../api";
+import { fetchMatchLineups, fetchPersons, triggerMatchEvent, fetchMatchById } from "../../../api";
 
 const { Option } = Select;
 
 const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [matchClock, setMatchClock] = useState({ isRunning: false, elapsedSeconds: 0 });
+  const [matchClock, setMatchClock] = useState(() => ({
+    isRunning: match?.clockRunning || false,
+    elapsedSeconds: match?.elapsedSeconds || 0,
+    matchId: match?._id || match?.id || null
+  }));
   const [selectedEventType, setSelectedEventType] = useState("Goal");
   const [lineups, setLineups] = useState([]);
   const [players, setPlayers] = useState([]);
+  const [selectedTeam, setSelectedTeam] = useState("home");
 
   const eventTypeMeta = {
     Goal: {
@@ -71,67 +76,213 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
   }, [matchClock.isRunning]);
 
   useEffect(() => {
-    const loadPlayersData = async () => {
-      if (!match?._id && !match?.id) return;
+    if (!visible || (!match?._id && !match?.id)) return;
+
+    const matchId = match._id || match.id;
+    form.resetFields();
+    setSelectedEventType("Goal");
+    setSelectedTeam("home");
+
+    // Immediately synchronize clock with the parent's running state
+    setMatchClock({
+      isRunning: match.clockRunning || false,
+      elapsedSeconds: match.elapsedSeconds || 0,
+      matchId: matchId,
+    });
+
+    const loadMatchDetails = async () => {
+      // 1. Fetch match details & update clock
       try {
-        const [lineupData, personsData] = await Promise.all([
-          fetchMatchLineups(match._id || match.id),
-          fetchPersons("Player"),
-        ]);
+        const details = await fetchMatchById(matchId);
+        const dbMatch = details.match || match;
+        const dbEvents = details.events || [];
+
+        if (dbMatch.status === "LIVE") {
+          const clockEvents = dbEvents
+            .filter((e) => e.eventType === "StartHalf" || e.eventType === "EndHalf")
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+          if (clockEvents.length > 0) {
+            const latestEvent = clockEvents[0];
+            if (latestEvent.eventType === "StartHalf") {
+              const startTime = new Date(latestEvent.createdAt);
+              const now = new Date();
+              const elapsed = Math.max(0, Math.floor((now - startTime) / 1000));
+              const baseSeconds = (latestEvent.minute - 1) * 60;
+              setMatchClock({
+                isRunning: true,
+                elapsedSeconds: baseSeconds + elapsed,
+                matchId: matchId,
+              });
+            } else {
+              // EndHalf event -> clock is paused
+              setMatchClock({
+                isRunning: false,
+                elapsedSeconds: latestEvent.minute * 60,
+                matchId: matchId,
+              });
+            }
+          } else {
+            // LIVE but no StartHalf/EndHalf events yet -> paused at 0
+            setMatchClock({ isRunning: false, elapsedSeconds: 0, matchId: matchId });
+          }
+        } else if (dbMatch.status === "FINISHED") {
+          setMatchClock({ isRunning: false, elapsedSeconds: 90 * 60, matchId: matchId });
+        } else {
+          setMatchClock({ isRunning: false, elapsedSeconds: 0, matchId: matchId });
+        }
+      } catch (error) {
+        console.error("Lỗi tải thông tin chi tiết trận đấu:", error);
+      }
+
+      // 2. Fetch match lineups
+      try {
+        const lineupData = await fetchMatchLineups(matchId);
         setLineups(Array.isArray(lineupData) ? lineupData : []);
+      } catch (error) {
+        console.error("Lỗi tải đội hình trận đấu:", error);
+        setLineups([]);
+      }
+
+      // 3. Fetch players list
+      try {
+        const personsData = await fetchPersons("Player");
         setPlayers(Array.isArray(personsData) ? personsData : []);
       } catch (error) {
-        console.error("Lỗi tải dữ liệu cầu thủ:", error);
+        console.error("Lỗi tải danh sách cầu thủ:", error);
+        setPlayers([]);
       }
     };
 
-    loadPlayersData();
-  }, [match]);
+    loadMatchDetails();
+  }, [match, visible]);
 
   if (!match) return null;
 
   const homeName = match.homeTeam?.shortName || match.homeTeam?.name || "Đội nhà";
   const awayName = match.awayTeam?.shortName || match.awayTeam?.name || "Đội khách";
 
-  const homeLineup = lineups.find((item) => item.teamId?._id === match.homeTeam?._id || item.teamId?.id === match.homeTeam?._id);
-  const awayLineup = lineups.find((item) => item.teamId?._id === match.awayTeam?._id || item.teamId?.id === match.awayTeam?._id);
+  const getCleanTeamId = (team) => {
+    if (!team) return null;
+    if (typeof team === "object") {
+      return team._id || team.id || null;
+    }
+    return team;
+  };
 
-  const homeStartingPlayers = (homeLineup?.startingXI || []).map((player) => ({
-    ...player,
-    teamId: match.homeTeam,
-  }));
-  const awayStartingPlayers = (awayLineup?.startingXI || []).map((player) => ({
-    ...player,
-    teamId: match.awayTeam,
-  }));
+  const matchHomeId = getCleanTeamId(match.homeTeam);
+  const matchAwayId = getCleanTeamId(match.awayTeam);
 
-  const homeBenchPlayers = (homeLineup?.substitutes || []).map((player) => ({
-    ...player,
-    teamId: match.homeTeam,
-  }));
-  const awayBenchPlayers = (awayLineup?.substitutes || []).map((player) => ({
-    ...player,
-    teamId: match.awayTeam,
-  }));
+  const homeLineup = lineups.find((item) => {
+    const itemTeamId = getCleanTeamId(item.teamId);
+    return String(itemTeamId) === String(matchHomeId);
+  });
+
+  const awayLineup = lineups.find((item) => {
+    const itemTeamId = getCleanTeamId(item.teamId);
+    return String(itemTeamId) === String(matchAwayId);
+  });
+
+  const mapPlayerWithTeam = (player, team) => {
+    if (!player) return null;
+    const isObj = typeof player === "object";
+    const pId = isObj ? (player._id || player.id) : player;
+    const pName = isObj ? (player.name || player.fullName || player.username) : "Cầu thủ";
+    return {
+      ...(isObj ? player : {}),
+      _id: pId,
+      id: pId,
+      name: pName,
+      teamId: team,
+    };
+  };
+
+  const homeStartingPlayers = (homeLineup?.startingXI || [])
+    .map(p => mapPlayerWithTeam(p, match.homeTeam))
+    .filter(Boolean);
+
+  const awayStartingPlayers = (awayLineup?.startingXI || [])
+    .map(p => mapPlayerWithTeam(p, match.awayTeam))
+    .filter(Boolean);
+
+  const homeBenchPlayers = (homeLineup?.substitutes || [])
+    .map(p => mapPlayerWithTeam(p, match.homeTeam))
+    .filter(Boolean);
+
+  const awayBenchPlayers = (awayLineup?.substitutes || [])
+    .map(p => mapPlayerWithTeam(p, match.awayTeam))
+    .filter(Boolean);
 
   const onFieldPlayers = [...homeStartingPlayers, ...awayStartingPlayers];
   const benchPlayers = [...homeBenchPlayers, ...awayBenchPlayers];
-  const fallbackPlayers = players.filter((player) => player.teamId?._id === match.homeTeam?._id || player.teamId?._id === match.awayTeam?._id || player.teamId === match.homeTeam?._id || player.teamId === match.awayTeam?._id);
-  const resolvedOnFieldPlayers = onFieldPlayers.length > 0 ? onFieldPlayers : fallbackPlayers;
-  const resolvedBenchPlayers = benchPlayers.length > 0 ? benchPlayers : fallbackPlayers;
+
+  const fallbackPlayers = players
+    .filter((player) => {
+      const playerTeamId = getCleanTeamId(player.currentTeam);
+      return (
+        playerTeamId &&
+        (String(playerTeamId) === String(matchHomeId) || String(playerTeamId) === String(matchAwayId))
+      );
+    })
+    .map((player) => {
+      const pId = player._id || player.id;
+      const pName = player.name || player.fullName || player.username || "Cầu thủ";
+      const pTeamId = String(getCleanTeamId(player.currentTeam)) === String(matchHomeId) ? match.homeTeam : match.awayTeam;
+      return {
+        ...player,
+        _id: pId,
+        id: pId,
+        name: pName,
+        teamId: pTeamId,
+      };
+    });
+
+  const activeTeam = selectedTeam || "home";
+
+  const filteredOnFieldPlayers = onFieldPlayers.filter((p) => {
+    const pTeamId = getCleanTeamId(p.teamId);
+    const targetTeamId = activeTeam === "home" ? matchHomeId : matchAwayId;
+    return String(pTeamId) === String(targetTeamId);
+  });
+
+  const filteredBenchPlayers = benchPlayers.filter((p) => {
+    const pTeamId = getCleanTeamId(p.teamId);
+    const targetTeamId = activeTeam === "home" ? matchHomeId : matchAwayId;
+    return String(pTeamId) === String(targetTeamId);
+  });
+
+  const filteredFallbackPlayers = fallbackPlayers.filter((p) => {
+    const pTeamId = getCleanTeamId(p.teamId);
+    const targetTeamId = activeTeam === "home" ? matchHomeId : matchAwayId;
+    return String(pTeamId) === String(targetTeamId);
+  });
+
+  const resolvedOnFieldPlayers = filteredOnFieldPlayers.length > 0 ? filteredOnFieldPlayers : filteredFallbackPlayers;
+  const resolvedBenchPlayers = filteredBenchPlayers.length > 0 ? filteredBenchPlayers : filteredFallbackPlayers;
+
+  console.log("LiveControlDrawer Debug:", {
+    matchHomeId,
+    matchAwayId,
+    lineups,
+    playersCount: players.length,
+    playersSample: players.slice(0, 2),
+    fallbackPlayersCount: fallbackPlayers.length,
+    onFieldPlayersCount: onFieldPlayers.length,
+    resolvedOnFieldPlayersCount: resolvedOnFieldPlayers.length,
+  });
 
   const formatMatchClock = (seconds) => {
     const totalMinutes = Math.floor(seconds / 60);
 
     if (seconds < 45 * 60) {
-      return `${totalMinutes}'`;
+      return `${totalMinutes + 1}'`; // Hiệp 1: 0s -> 1', 2699s -> 45'
     }
 
     if (seconds < 90 * 60) {
-      return `45+${totalMinutes - 45}'`;
+      return `${totalMinutes + 1}'`; // Hiệp 2: 2700s -> 46', 5399s -> 90'
     }
 
-    return `90+${totalMinutes - 90}'`;
+    return `90+${totalMinutes - 90 + 1}'`;
   };
 
   const handlePlayerSelect = (value) => {
@@ -163,6 +314,8 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
       await triggerMatchEvent(match._id || match.id, eventData);
       message.success(`Đã cập nhật sự kiện ${values.eventType} thành công!`);
       form.resetFields();
+      setSelectedEventType("Goal");
+      setSelectedTeam("home");
       onEventTriggered && onEventTriggered();
     } catch (err) {
       message.error("Lỗi gửi sự kiện: " + (err.response?.data?.message || err.message));
@@ -187,12 +340,44 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
       setMatchClock({
         isRunning: true,
         elapsedSeconds: half === "first" ? 0 : 45 * 60,
+        matchId: match._id || match.id,
       });
       message.success(half === "first" ? "Đã bắt đầu Hiệp 1" : "Đã bắt đầu Hiệp 2");
       form.resetFields();
       onEventTriggered && onEventTriggered();
     } catch (err) {
       message.error("Lỗi bắt đầu hiệp: " + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEndHalf = async () => {
+    try {
+      setLoading(true);
+      const isFirstHalf = matchClock.elapsedSeconds < 45 * 60;
+      const targetMinute = isFirstHalf ? 45 : 90;
+
+      const eventData = {
+        type: "EndHalf",
+        minute: targetMinute,
+        stoppageMinute: 0,
+        player: "System",
+        team: "home",
+        note: isFirstHalf ? "Kết thúc Hiệp 1" : "Kết thúc Hiệp 2",
+      };
+
+      await triggerMatchEvent(match._id || match.id, eventData);
+      setMatchClock({
+        isRunning: false,
+        elapsedSeconds: targetMinute * 60,
+        matchId: match._id || match.id,
+      });
+      message.success(isFirstHalf ? "Đã kết thúc Hiệp 1" : "Đã kết thúc Hiệp 2");
+      form.resetFields();
+      onEventTriggered && onEventTriggered();
+    } catch (err) {
+      message.error("Lỗi kết thúc hiệp: " + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -241,36 +426,56 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
 
         <div className="text-xs text-rose-400 font-semibold flex items-center justify-center gap-2">
           <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping inline-block" />
-          <span>Phút thi đấu: {match.status === "LIVE" ? formatMatchClock(matchClock.elapsedSeconds) : match.status}</span>
+          <span>
+            Phút thi đấu:{" "}
+            {match.status === "LIVE" ? (
+              formatMatchClock(matchClock.elapsedSeconds)
+            ) : (
+              match.status
+            )}
+          </span>
         </div>
       </div>
 
-      {/* Quick Start Buttons */}
+      {/* Quick Start / End Buttons */}
       <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
         <div className="font-bold text-sm text-slate-800 mb-2 flex items-center gap-2">
           <Zap className="w-4 h-4 text-amber-500" />
-          <span>Bắt đầu hiệp nhanh</span>
+          <span>Điều khiển thời gian hiệp đấu</span>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        {matchClock.isRunning ? (
           <Button
             size="large"
-            type="default"
-            className="border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-            onClick={() => handleQuickStart("first")}
+            type="primary"
+            danger
+            className="w-full font-bold bg-rose-600 hover:bg-rose-700 text-white border-0 cursor-pointer"
+            onClick={handleEndHalf}
             loading={loading}
           >
-            ▶ Bắt đầu Hiệp 1
+            🛑 Kết thúc hiệp đấu
           </Button>
-          <Button
-            size="large"
-            type="default"
-            className="border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-            onClick={() => handleQuickStart("second")}
-            loading={loading}
-          >
-            ▶ Bắt đầu Hiệp 2
-          </Button>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              size="large"
+              type="default"
+              className="border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-semibold cursor-pointer"
+              onClick={() => handleQuickStart("first")}
+              loading={loading}
+            >
+              ▶ Bắt đầu Hiệp 1
+            </Button>
+            <Button
+              size="large"
+              type="default"
+              className="border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-semibold cursor-pointer"
+              onClick={() => handleQuickStart("second")}
+              loading={loading}
+            >
+              ▶ Bắt đầu Hiệp 2
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Trigger Event Form */}
@@ -286,6 +491,9 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
         onValuesChange={(changedValues) => {
           if (changedValues.eventType) {
             setSelectedEventType(changedValues.eventType);
+          }
+          if (changedValues.team) {
+            setSelectedTeam(changedValues.team);
           }
         }}
         initialValues={{
@@ -366,23 +574,25 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
             <div className="font-semibold text-sm text-slate-800 mb-3">Chọn cầu thủ thay người</div>
             <div className="grid grid-cols-1 gap-3">
               <Form.Item name="outgoingPlayer" label="Cầu thủ rời sân">
-                <Select size="large" placeholder="Chọn cầu thủ đang trên sân">
-                  {resolvedOnFieldPlayers.map((player) => (
-                    <Option key={player._id || player.id} value={player._id || player.id}>
-                      {player.name || player.fullName || player.username}
-                    </Option>
-                  ))}
-                </Select>
+                <Select
+                  size="large"
+                  placeholder="Chọn cầu thủ đang trên sân"
+                  options={resolvedOnFieldPlayers.map((player) => ({
+                    value: player._id || player.id,
+                    label: player.name || player.fullName || player.username,
+                  }))}
+                />
               </Form.Item>
 
               <Form.Item name="incomingPlayer" label="Cầu thủ vào sân">
-                <Select size="large" placeholder="Chọn cầu thủ từ băng ghế dự bị">
-                  {resolvedBenchPlayers.map((player) => (
-                    <Option key={player._id || player.id} value={player._id || player.id}>
-                      {player.name || player.fullName || player.username}
-                    </Option>
-                  ))}
-                </Select>
+                <Select
+                  size="large"
+                  placeholder="Chọn cầu thủ từ băng ghế dự bị"
+                  options={resolvedBenchPlayers.map((player) => ({
+                    value: player._id || player.id,
+                    label: player.name || player.fullName || player.username,
+                  }))}
+                />
               </Form.Item>
             </div>
           </div>
@@ -395,13 +605,11 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
                 placeholder="Chọn cầu thủ từ sân"
                 allowClear
                 onChange={handlePlayerSelect}
-              >
-                {resolvedOnFieldPlayers.map((player) => (
-                  <Option key={player._id || player.id} value={player._id || player.id}>
-                    {player.name || player.fullName || player.username}
-                  </Option>
-                ))}
-              </Select>
+                options={resolvedOnFieldPlayers.map((player) => ({
+                  value: player._id || player.id,
+                  label: player.name || player.fullName || player.username,
+                }))}
+              />
             </Form.Item>
 
             <Form.Item name="player" label="Tên cầu thủ (tùy chọn)">

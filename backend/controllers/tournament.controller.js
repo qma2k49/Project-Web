@@ -3,7 +3,7 @@ import TournamentModel from '../models/tournament.model.js';
 
 export const getTournaments = async (req, res) => {
   try {
-    let tournaments = await TournamentModel.find();
+    let tournaments = await TournamentModel.find().populate('groups.teams');
     if (tournaments.length === 0) {
       tournaments = await TournamentModel.insertMany(defaultTournaments);
     }
@@ -15,7 +15,7 @@ export const getTournaments = async (req, res) => {
 
 export const getTournamentById = async (req, res) => {
   try {
-    const tournament = await TournamentModel.findById(req.params.id);
+    const tournament = await TournamentModel.findById(req.params.id).populate('groups.teams');
     if (!tournament) {
       return res.status(404).json({ message: 'Không tìm thấy giải đấu' });
     }

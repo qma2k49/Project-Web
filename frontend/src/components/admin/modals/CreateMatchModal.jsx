@@ -150,7 +150,36 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
             </Select>
           </Form.Item>
 
-
+          <Form.Item noStyle dependencies={["tournamentId"]}>
+            {({ getFieldValue }) => {
+              const tId = getFieldValue("tournamentId");
+              const selectedT = tournaments.find((t) => t._id === tId);
+              const isCup = selectedT?.type === "CUP";
+              return (
+                <Form.Item
+                  name="round"
+                  label="Vòng đấu / Giai đoạn"
+                  rules={[{ required: true, message: "Vui lòng chọn hoặc nhập vòng đấu!" }]}
+                >
+                  {isCup ? (
+                    <Select placeholder="Chọn vòng đấu..." size="large">
+                      <Option value={1}>Vòng bảng - Lượt 1</Option>
+                      <Option value={2}>Vòng bảng - Lượt 2</Option>
+                      <Option value={3}>Vòng bảng - Lượt 3</Option>
+                      <Option value={4}>Vòng bảng - Lượt 4</Option>
+                      <Option value={5}>Vòng bảng - Lượt 5</Option>
+                      <Option value={6}>Bán kết - Lượt đi</Option>
+                      <Option value={7}>Bán kết - Lượt về</Option>
+                      <Option value={8}>Chung kết - Lượt đi</Option>
+                      <Option value={9}>Chung kết - Lượt về</Option>
+                    </Select>
+                  ) : (
+                    <InputNumber min={1} max={50} placeholder="Nhập số vòng..." className="w-full" size="large" />
+                  )}
+                </Form.Item>
+              );
+            }}
+          </Form.Item>
         </div>
 
         {/* Status & Match Time */}

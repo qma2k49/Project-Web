@@ -359,6 +359,7 @@ const AdminPage = () => {
             matches={data.matches}
             teams={data.teams}
             stadiums={data.stadiums}
+            players={data.players}
             onBack={() => setActiveTab("dashboard")}
           />
         </div>
@@ -375,6 +376,7 @@ const AdminPage = () => {
           <LiveControlView
             loading={loading}
             matches={data.matches}
+            players={data.players}
             onOpenLiveControl={handleOpenLiveControl}
             onBack={() => setActiveTab("dashboard")}
           />

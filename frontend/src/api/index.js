@@ -45,6 +45,11 @@ export const fetchMatches = async () => {
   return res.data?.data || res.data;
 };
 
+export const fetchMatchById = async (matchId) => {
+  const res = await api.get(`/matches/${matchId}`);
+  return res.data;
+};
+
 export const fetchTournaments = async () => {
   const res = await api.get("/tournaments");
   return res.data?.data || res.data;
@@ -106,6 +111,16 @@ export const createPerson = async (personData) => {
 
 export const updatePerson = async (personId, personData) => {
   const res = await api.put(`/persons/${personId}`, personData);
+  return res.data;
+};
+
+export const fetchTeamStandings = async (tournamentId) => {
+  const res = await api.get(`/team-standings/tournament/${tournamentId}`);
+  return res.data;
+};
+
+export const saveMatchLineup = async (lineupData) => {
+  const res = await api.post("/match-lineups", lineupData);
   return res.data;
 };
 

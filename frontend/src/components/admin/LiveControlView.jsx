@@ -1,6 +1,8 @@
-import React from "react";
-import { Radio, PlayCircle, Clock3, ArrowRight, Trophy } from "lucide-react";
+import React, { useState } from "react";
+import { Radio, PlayCircle, Clock3, ArrowRight, Trophy, Users } from "lucide-react";
 import PageHeader from "./PageHeader";
+import MatchLineupModal from "./modals/MatchLineupModal";
+import LiveClock from "./LiveClock";
 
 const getTeamDisplayName = (team) => {
   if (!team) return "—";
@@ -17,7 +19,15 @@ const getTeamLogo = (team) => {
   return null;
 };
 
-const LiveControlView = ({ loading = false, matches = [], onOpenLiveControl, onBack }) => {
+const LiveControlView = ({ loading = false, matches = [], players = [], onOpenLiveControl, onBack }) => {
+  const [selectedLineupMatch, setSelectedLineupMatch] = useState(null);
+  const [isLineupModalOpen, setIsLineupModalOpen] = useState(false);
+
+  const handleOpenLineupModal = (match) => {
+    setSelectedLineupMatch(match);
+    setIsLineupModalOpen(true);
+  };
+
   const liveMatches = (matches || []).filter((match) => match.status === "LIVE");
   const upcomingMatches = (matches || []).filter((match) => match.status !== "LIVE" && match.status !== "FINISHED");
 
@@ -122,9 +132,15 @@ const LiveControlView = ({ loading = false, matches = [], onOpenLiveControl, onB
                 <div key={match._id || match.id} className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-5">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${isLive ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-600"}`}>
-                        {isLive ? "Đang trực tiếp" : match.status === "FINISHED" ? "Đã kết thúc" : "Sắp diễn ra"}
-                      </span>
+                      {isLive ? (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] bg-rose-50 text-rose-600">
+                          Đang trực tiếp • <LiveClock match={match} showIcon={false} />
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] bg-slate-100 text-slate-600">
+                          {match.status === "FINISHED" ? "Đã kết thúc" : "Sắp diễn ra"}
+                        </span>
+                      )}
                       <span className="text-sm text-slate-500">
                         {typeof match.tournamentId === "object" ? match.tournamentId?.name : "V.League"}
                       </span>
@@ -170,20 +186,36 @@ const LiveControlView = ({ loading = false, matches = [], onOpenLiveControl, onB
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => onOpenLiveControl && onOpenLiveControl(match)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
-                  >
-                    <Radio className="w-4 h-4" />
-                    Mở điều khiển
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => handleOpenLineupModal(match)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 border border-gray-200 text-sm shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Users className="w-4 h-4 text-slate-500" />
+                      Cài đặt đội hình
+                    </button>
+                    <button
+                      onClick={() => onOpenLiveControl && onOpenLiveControl(match)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 cursor-pointer"
+                    >
+                      <Radio className="w-4 h-4" />
+                      Điều khiển trực tiếp
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      <MatchLineupModal
+        visible={isLineupModalOpen}
+        onClose={() => setIsLineupModalOpen(false)}
+        match={selectedLineupMatch}
+        players={players}
+      />
     </main>
   );
 };
