@@ -1,11 +1,5 @@
 import StadiumModel from "../models/stadium.model.js";
 
-const defaultStadiums = [
-  { name: "Sân vận động Hàng Đẫy", capacity: 22500, builtYear: 1958, city: "Hà Nội", country: "Việt Nam" },
-  { name: "Sân vận động Thống Nhất", capacity: 16000, builtYear: 1931, city: "TP. Hồ Chí Minh", country: "Việt Nam" },
-  { name: "Sân vận động Thiên Trường", capacity: 30000, builtYear: 2003, city: "Nam Định", country: "Việt Nam" },
-  { name: "Sân vận động Lạch Tray", capacity: 30000, builtYear: 1958, city: "Hải Phòng", country: "Việt Nam" },
-];
 
 const stadiumController = {
     createStadium: async (req, res) => {

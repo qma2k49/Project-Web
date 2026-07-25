@@ -17,18 +17,28 @@ const getTeamLogo = (team) => {
   return null;
 };
 
-const OngoingMatches = ({ matches = [], onLiveControl, loading = false }) => {
+const OngoingMatches = ({ 
+  matches = [], 
+  onLiveControl, 
+  loading = false,
+  title = "Trận đấu đang/sắp diễn ra",
+  showControlBtn = true
+}) => {
   return (
     <div className="bg-white border border-gray-200/90 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
       {/* Header */}
       <div className="p-5 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
+            showControlBtn 
+              ? "bg-rose-50 text-rose-600 border-rose-100" 
+              : "bg-emerald-50 text-emerald-600 border-emerald-100"
+          }`}>
             <Tv className="w-4 h-4" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              Trận đấu đang/sắp diễn ra
+              {title}
             </h2>
           </div>
         </div>
@@ -53,7 +63,7 @@ const OngoingMatches = ({ matches = [], onLiveControl, loading = false }) => {
               <tr className="border-b border-gray-100 bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                 <th className="py-3 px-6">Chi tiết trận đấu</th>
                 <th className="py-3 px-4 text-center w-[140px]">Trạng thái</th>
-                <th className="py-3 px-6 text-center w-[220px]">Thao tác</th>
+                {showControlBtn && <th className="py-3 px-6 text-center w-[220px]">Thao tác</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-xs">
@@ -127,17 +137,19 @@ const OngoingMatches = ({ matches = [], onLiveControl, loading = false }) => {
                     </td>
 
                     {/* Action Button */}
-                    <td className="py-4 px-6 align-middle">
-                      <div className="flex justify-center items-center w-[220px] mx-auto">
-                      <button
-                        onClick={() => onLiveControl && onLiveControl(match)}
-                        className="inline-flex items-center justify-center gap-2 bg-[#054432] hover:bg-[#033224] text-emerald-400 font-semibold px-4 py-2 rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
-                      >
-                        <Radio className="w-3.5 h-3.5 text-emerald-400" />
-                        Điều khiển trực tiếp
-                      </button>
-                      </div>
-                    </td>
+                    {showControlBtn && (
+                      <td className="py-4 px-6 align-middle">
+                        <div className="flex justify-center items-center w-[220px] mx-auto">
+                        <button
+                          onClick={() => onLiveControl && onLiveControl(match)}
+                          className="inline-flex items-center justify-center gap-2 bg-[#054432] hover:bg-[#033224] text-emerald-400 font-semibold px-4 py-2 rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
+                        >
+                          <Radio className="w-3.5 h-3.5 text-emerald-400" />
+                          Điều khiển trực tiếp
+                        </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -147,12 +159,14 @@ const OngoingMatches = ({ matches = [], onLiveControl, loading = false }) => {
       </div>
 
       {/* Footer CTA Banner */}
-      <div className="p-4 bg-slate-50/60 border-t border-gray-100 text-center">
-        <button className="text-xs font-extrabold tracking-wider text-emerald-700 hover:text-emerald-800 transition-colors uppercase inline-flex items-center gap-1.5">
-          Mở bảng điều khiển đa trận đấu
-          <ArrowUpRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
+      {showControlBtn && (
+        <div className="p-4 bg-slate-50/60 border-t border-gray-100 text-center">
+          <button className="text-xs font-extrabold tracking-wider text-emerald-700 hover:text-emerald-800 transition-colors uppercase inline-flex items-center gap-1.5">
+            Mở bảng điều khiển đa trận đấu
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

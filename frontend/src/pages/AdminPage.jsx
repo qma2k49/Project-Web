@@ -653,12 +653,19 @@ return (
 
           {/* 2-Column Main Section: Ongoing Matches & Recent Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Primary Column: Ongoing Matches */}
-            <div className="lg:col-span-7 xl:col-span-8">
+            {/* Left Primary Column: Ongoing & Finished Matches */}
+            <div className="lg:col-span-7 xl:col-span-8 space-y-6">
               <OngoingMatches
-                matches={data.matches}
+                title="Trận đấu đang/sắp diễn ra"
+                matches={(data.matches || []).filter(m => m.status !== "FINISHED")}
                 loading={loading}
                 onLiveControl={handleOpenLiveControl}
+              />
+              <OngoingMatches
+                title="Trận đấu đã diễn ra"
+                matches={(data.matches || []).filter(m => m.status === "FINISHED")}
+                loading={loading}
+                showControlBtn={false}
               />
             </div>
 
