@@ -1,6 +1,8 @@
 import MatchModel from '../models/match.model.js';
 import MatchEventModel from '../models/matchEvent.model.js';
 import MatchLineupModel from '../models/matchLineup.model.js';
+import PredictionModel from '../models/prediction.model.js';
+import PredictionLeaderboardModel from '../models/predictionLeaderboard.model.js';
 
 const matchController = {
   getMatches: async (req, res) => {
@@ -174,6 +176,65 @@ const matchController = {
         if (match && match.status !== 'LIVE') {
           match.status = 'LIVE';
           await match.save();
+        }
+      }
+
+      if (type === 'EndHalf') {
+        const match = await MatchModel.findById(matchId);
+        // If it is the end of the second half (90th minute event), set match to FINISHED
+        if (match && minute >= 90) {
+          match.status = 'FINISHED';
+          await match.save();
+
+          // Calculate predictions for this finished match
+          try {
+            const predictions = await PredictionModel.find({ matchId });
+            for (const pred of predictions) {
+              const homeScore = match.homeScore || 0;
+              const awayScore = match.awayScore || 0;
+              const predHome = pred.predictedHomeScore || 0;
+              const predAway = pred.predictedAwayScore || 0;
+
+              const exactMatch = (predHome === homeScore && predAway === awayScore);
+              const realResult = Math.sign(homeScore - awayScore);
+              const predResult = Math.sign(predHome - predAway);
+              const correctResult = (realResult === predResult);
+
+              let points = 0;
+              if (exactMatch) points = 3;
+              else if (correctResult) points = 1;
+
+              pred.pointsEarned = points;
+              pred.status = 'FINISHED';
+              await pred.save();
+
+              // Update the leaderboard entry for this user
+              let leaderboardEntry = await PredictionLeaderboardModel.findOne({
+                userId: pred.userId,
+                tournamentId: match.tournamentId
+              });
+
+              if (!leaderboardEntry) {
+                leaderboardEntry = await PredictionLeaderboardModel.create({
+                  userId: pred.userId,
+                  tournamentId: match.tournamentId,
+                  totalPoints: 0,
+                  exactMatches: 0,
+                  correctResults: 0
+                });
+              }
+
+              leaderboardEntry.totalPoints += points;
+              if (exactMatch) {
+                leaderboardEntry.exactMatches += 1;
+              } else if (correctResult) {
+                leaderboardEntry.correctResults += 1;
+              }
+              await leaderboardEntry.save();
+            }
+          } catch (predError) {
+            console.error("Lỗi tự động cập nhật điểm dự đoán:", predError);
+          }
         }
       }
 

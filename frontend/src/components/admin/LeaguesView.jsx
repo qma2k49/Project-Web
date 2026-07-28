@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { PageHeader } from "./index";
+import PageHeader from "./PageHeader";
 import { fetchTeamStandings } from "../../api";
 import { Trophy, Calendar, Users, ArrowLeft, Shield, AlertCircle, Sparkles } from "lucide-react";
 import { Spin } from "antd";
 import MatchLineupModal from "./modals/MatchLineupModal";
 import LiveClock from "./LiveClock";
 
-const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players = [], onBack }) => {
+const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players = [], onBack, isAdmin = true }) => {
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [standings, setStandings] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(false);
@@ -255,7 +255,7 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
         </div>
 
         {/* Lineup configuration buttons */}
-        {(stage.leg1 || stage.leg2) && (
+        {isAdmin && (stage.leg1 || stage.leg2) && (
           <div className="flex justify-end gap-2 mt-3.5 pt-3 border-t border-slate-100 text-xs">
             {stage.leg1 && (
               <button

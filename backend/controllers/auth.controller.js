@@ -64,7 +64,13 @@ const authController = {
         return res.status(401).json({ message: 'Tài khoản hoặc mật khẩu không chính xác' });
       }
 
-      const isMatch = await bcrypt.compare(password, user.password);
+      let isMatch = false;
+      if (user.password && (user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$'))) {
+        isMatch = await bcrypt.compare(password, user.password);
+      } else {
+        isMatch = (password === user.password);
+      }
+
       if (!isMatch) {
         return res.status(401).json({ message: 'Tài khoản hoặc mật khẩu không chính xác' });
       }

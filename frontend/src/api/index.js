@@ -124,4 +124,58 @@ export const saveMatchLineup = async (lineupData) => {
   return res.data;
 };
 
+// Auth APIs
+export const loginUser = async (userName, password) => {
+  const res = await api.post("/auth/login", { userName, password });
+  return res.data;
+};
+
+export const registerUser = async (userName, password, role = "USER") => {
+  const res = await api.post("/auth/register", { userName, password, role });
+  return res.data;
+};
+
+export const fetchMe = async (token) => {
+  const res = await api.get("/auth/me", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+};
+
+// Prediction APIs
+export const submitPrediction = async (predictionData, token) => {
+  const res = await api.post("/predictions", predictionData, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+};
+
+export const fetchMyPredictions = async (token) => {
+  const res = await api.get("/predictions/my-predictions", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+};
+
+export const fetchPredictionLeaderboard = async () => {
+  const res = await api.get("/predictions/leaderboard");
+  return res.data;
+};
+
+// Player Standing APIs
+export const fetchTopScorers = async (tournamentId) => {
+  const res = await api.get(`/player-standings/scorers/${tournamentId}`);
+  return res.data;
+};
+
+export const fetchTopAssists = async (tournamentId) => {
+  const res = await api.get(`/player-standings/assists/${tournamentId}`);
+  return res.data;
+};
+
+export const fetchCardStatistics = async (tournamentId) => {
+  const res = await api.get(`/player-standings/cards/${tournamentId}`);
+  return res.data;
+};
+
 export default api;
