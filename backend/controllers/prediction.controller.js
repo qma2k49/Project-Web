@@ -52,27 +52,7 @@ const predictionController = {
         .populate('userId', 'userName')
         .sort({ totalPoints: -1 });
 
-      if (leaderboard.length === 0) {
-        const accounts = await AccountModel.find({}).select('userName');
-        if (accounts.length > 0) {
-          leaderboard = accounts.map((acc, idx) => ({
-            _id: acc._id,
-            userId: acc,
-            totalPoints: (accounts.length - idx) * 3 + 5,
-            exactMatches: idx,
-            correctResults: idx * 2
-          })).sort((a, b) => b.totalPoints - a.totalPoints);
-        } else {
-          const mockNames = ["nguyen_van_a", "tran_thi_b", "le_hoang_c", "pham_minh_d"];
-          leaderboard = mockNames.map((name, idx) => ({
-            _id: new mongoose.Types.ObjectId(),
-            userId: { userName: name },
-            totalPoints: (mockNames.length - idx) * 3 + 5,
-            exactMatches: idx,
-            correctResults: idx * 2
-          }));
-        }
-      }
+
 
       res.status(200).json(leaderboard);
     } catch (error) {

@@ -1,4 +1,6 @@
 import AccountModel from '../models/account.model.js';
+import TournamentModel from '../models/tournament.model.js';
+import PredictionLeaderboardModel from '../models/predictionLeaderboard.model.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -27,6 +29,22 @@ const authController = {
         password: hashedPassword,
         role: assignedRole,
       });
+
+      // Automatically add user to prediction leaderboard with 0 points
+      try {
+        const firstTournament = await TournamentModel.findOne({});
+        if (firstTournament) {
+          await PredictionLeaderboardModel.create({
+            userId: newAccount._id,
+            tournamentId: firstTournament._id,
+            totalPoints: 0,
+            exactMatches: 0,
+            correctResults: 0
+          });
+        }
+      } catch (leaderboardErr) {
+        console.error("Lỗi tự động thêm user mới vào leaderboard:", leaderboardErr);
+      }
 
       const token = jwt.sign(
         { id: newAccount._id, userName: newAccount.userName, role: newAccount.role },
