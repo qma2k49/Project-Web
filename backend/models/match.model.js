@@ -22,10 +22,6 @@ const matchSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Stadium'
     },
-    matchDetails: {
-        // gợi ý gì đi???
-
-    }
 }, { timestamps: true });
 
 const MatchModel = mongoose.model('Match', matchSchema);
