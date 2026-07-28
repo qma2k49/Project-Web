@@ -1,15 +1,11 @@
 import express from 'express';
-import {
-  getLineupByMatch,
-  saveOrUpdateLineup,
-  deleteLineup,
-} from '../controllers/matchLineup.controller.js';
+import matchLineupController from '../controllers/matchLineup.controller.js';
 import { requireAdmin } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-router.get('/match/:matchId', getLineupByMatch);
-router.post('/', requireAdmin, saveOrUpdateLineup);
-router.delete('/:id', requireAdmin, deleteLineup);
+router.get('/match/:matchId', matchLineupController.getLineupByMatch);
+router.post('/', requireAdmin, matchLineupController.saveOrUpdateLineup);
+router.delete('/:id', requireAdmin, matchLineupController.deleteLineup);
 
 export default router;

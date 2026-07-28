@@ -1,12 +1,12 @@
 import express from 'express';
-import { getPersons, createPerson, updatePerson, deletePerson } from '../controllers/person.controller.js';
+import personController from '../controllers/person.controller.js';
 import { requireAdmin } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-router.get('/', getPersons);
-router.post('/', requireAdmin, createPerson);
-router.put('/:id', requireAdmin, updatePerson);
-router.delete('/:id', requireAdmin, deletePerson);
+router.get('/', personController.getPersons);
+router.post('/', requireAdmin, personController.createPerson);
+router.put('/:id', requireAdmin, personController.updatePerson);
+router.delete('/:id', requireAdmin, personController.deletePerson);
 
 export default router;

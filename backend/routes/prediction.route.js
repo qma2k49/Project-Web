@@ -1,10 +1,10 @@
 import express from 'express';
-import { submitPrediction, getLeaderboard } from '../controllers/prediction.controller.js';
+import predictionController from '../controllers/prediction.controller.js';
 import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-router.post('/', verifyToken, submitPrediction);
-router.get('/leaderboard', getLeaderboard);
+router.post('/', verifyToken, predictionController.submitPrediction);
+router.get('/leaderboard', predictionController.getLeaderboard);
 
 export default router;

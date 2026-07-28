@@ -440,7 +440,7 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
               <span className={`w-1.5 h-1.5 rounded-full ${selectedTournament.status === "COMPLETED" ? "bg-blue-600" :
                 selectedTournament.status === "ONGOING" ? "bg-emerald-600" : "bg-amber-600"
                 }`}></span>
-              {selectedTournament.status === "COMPLETED" ? "Đã kết thúc" :
+              {selectedTournament.status === "COMPLETED" ? "Kết thúc" :
                 selectedTournament.status === "ONGOING" ? "Đang diễn ra" : "Chưa bắt đầu"}
             </span>
           </div>
@@ -750,7 +750,7 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
                   tournament.status === "ONGOING" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
                     "bg-amber-50 text-amber-700 border-amber-100"
                   }`}>
-                  {tournament.status === "COMPLETED" ? "Đã kết thúc" :
+                  {tournament.status === "COMPLETED" ? "Kết thúc" :
                     tournament.status === "ONGOING" ? "Đang diễn ra" : "Chưa bắt đầu"}
                 </span>
               </div>
