@@ -17,9 +17,9 @@ const getTeamLogo = (team) => {
   return null;
 };
 
-const OngoingMatches = ({ 
-  matches = [], 
-  onLiveControl, 
+const OngoingMatches = ({
+  matches = [],
+  onLiveControl,
   loading = false,
   title = "Trận đấu đang/sắp diễn ra",
   showControlBtn = true
@@ -29,11 +29,10 @@ const OngoingMatches = ({
       {/* Header */}
       <div className="p-5 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${
-            showControlBtn 
-              ? "bg-rose-50 text-rose-600 border-rose-100" 
-              : "bg-emerald-50 text-emerald-600 border-emerald-100"
-          }`}>
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${showControlBtn
+            ? "bg-rose-50 text-rose-600 border-rose-100"
+            : "bg-emerald-50 text-emerald-600 border-emerald-100"
+            }`}>
             <Tv className="w-4 h-4" />
           </div>
           <div>
@@ -42,9 +41,6 @@ const OngoingMatches = ({
             </h2>
           </div>
         </div>
-        <button className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1">
-          Xem toàn bộ lịch trình
-        </button>
       </div>
 
       {/* Table List */}
@@ -55,7 +51,7 @@ const OngoingMatches = ({
           </div>
         ) : matches.length === 0 ? (
           <div className="p-12 text-center text-slate-400 font-medium text-xs">
-            Chưa có trận đấu nào trong cơ sở dữ liệu. Vui lòng bấm "+ Trận đấu mới" để thêm.
+            Chưa có trận đấu nào mới.
           </div>
         ) : (
           <table className="w-full text-left border-collapse">
@@ -123,16 +119,16 @@ const OngoingMatches = ({
                     {/* Time / Status */}
                     <td className="py-4 px-4 align-middle">
                       <div className="flex justify-center items-center w-[140px] mx-auto">
-                      {isLive ? (
-                        <span className="inline-flex items-center gap-1.5 font-bold text-rose-600 text-xs bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-                          TRỰC TIẾP • <LiveClock match={match} showIcon={false} />
-                        </span>
-                      ) : (
-                        <span className="font-semibold text-slate-500 text-xs px-2.5 py-1 rounded-full bg-slate-100">
-                          {match.status === "FINISHED" ? "KẾT THÚC" : "CHƯA BẮT ĐẦU"}
-                        </span>
-                      )}
+                        {isLive ? (
+                          <span className="inline-flex items-center gap-1.5 font-bold text-rose-600 text-xs bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                            TRỰC TIẾP • <LiveClock match={match} showIcon={false} />
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-slate-500 text-xs px-2.5 py-1 rounded-full bg-slate-100">
+                            {match.status === "FINISHED" ? "KẾT THÚC" : "CHƯA BẮT ĐẦU"}
+                          </span>
+                        )}
                       </div>
                     </td>
 
@@ -140,13 +136,13 @@ const OngoingMatches = ({
                     {showControlBtn && (
                       <td className="py-4 px-6 align-middle">
                         <div className="flex justify-center items-center w-[220px] mx-auto">
-                        <button
-                          onClick={() => onLiveControl && onLiveControl(match)}
-                          className="inline-flex items-center justify-center gap-2 bg-[#054432] hover:bg-[#033224] text-emerald-400 font-semibold px-4 py-2 rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
-                        >
-                          <Radio className="w-3.5 h-3.5 text-emerald-400" />
-                          Điều khiển trực tiếp
-                        </button>
+                          <button
+                            onClick={() => onLiveControl && onLiveControl(match)}
+                            className="inline-flex items-center justify-center gap-2 bg-[#054432] hover:bg-[#033224] text-emerald-400 font-semibold px-4 py-2 rounded-xl text-xs transition-colors shadow-xs cursor-pointer"
+                          >
+                            <Radio className="w-3.5 h-3.5 text-emerald-400" />
+                            Điều khiển trực tiếp
+                          </button>
                         </div>
                       </td>
                     )}
@@ -158,15 +154,7 @@ const OngoingMatches = ({
         )}
       </div>
 
-      {/* Footer CTA Banner */}
-      {showControlBtn && (
-        <div className="p-4 bg-slate-50/60 border-t border-gray-100 text-center">
-          <button className="text-xs font-extrabold tracking-wider text-emerald-700 hover:text-emerald-800 transition-colors uppercase inline-flex items-center gap-1.5">
-            Mở bảng điều khiển đa trận đấu
-            <ArrowUpRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+
     </div>
   );
 };
