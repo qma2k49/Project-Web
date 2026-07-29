@@ -202,15 +202,15 @@ const HomePage = () => {
                 const mTourId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
                 return String(mTourId) === String(tournament._id || tournament.id);
               });
-              
+
               const tourLiveMatch = tourMatches.find(m => m.status === "LIVE");
               const tourUpcomingMatch = tourMatches.find(m => m.status === "NOT STARTED");
               const tourFinishedMatch = tourMatches.find(m => m.status === "FINISHED");
-              
+
               let tourHeroMatch = null;
               let tourHeroMatchTitle = "Trận đấu sắp tới";
               let tourIsLive = false;
-              
+
               if (tourLiveMatch) {
                 tourHeroMatch = tourLiveMatch;
                 tourHeroMatchTitle = "Trận đấu đang diễn ra";
@@ -222,7 +222,7 @@ const HomePage = () => {
                 tourHeroMatch = tourFinishedMatch;
                 tourHeroMatchTitle = "Kết quả mới nhất";
               }
-              
+
               return (
                 <div key={tournament._id || tournament.id} className="relative py-14 px-6">
                   <div className="absolute top-[-50%] right-[-10%] w-[60%] h-[150%] bg-emerald-500/5 rounded-full blur-[120px]" />
@@ -235,21 +235,18 @@ const HomePage = () => {
                       <h2 className="text-4xl lg:text-5xl font-black tracking-tight leading-none text-white">
                         {tournament.name}
                       </h2>
-                      <p className="text-slate-300 text-sm max-w-lg leading-relaxed">
-                        Mùa giải {tournament.season || "2026"} • Thể thức {tournament.type === "CUP" ? "Cúp loại trực tiếp" : "Vòng tròn tính điểm"}. Cập nhật lịch thi đấu trực tuyến, sơ đồ thi đấu, sự kiện trực tiếp (bàn thắng, thẻ phạt, thay người) nhanh nhất.
-                      </p>
                       {!token && (
                         <div className="pt-2">
                           <button
                             onClick={() => navigate("/login")}
                             className="bg-emerald-500 hover:bg-emerald-400 text-[#05241b] font-black text-xs px-5 py-3 rounded-xl transition-all shadow-lg hover:scale-105 duration-200 cursor-pointer"
                           >
-                            Đăng nhập để nhận định & dự đoán tỷ số 🌟
+                            Đăng nhập để nhận định & dự đoán tỷ số
                           </button>
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Hero Match Visualizer */}
                     <div className="hidden lg:flex justify-end">
                       {tourHeroMatch ? (
@@ -328,7 +325,7 @@ const HomePage = () => {
                       onClick={() => navigate(token ? "/user" : "/login")}
                       className="bg-teal-400 hover:bg-teal-300 text-slate-950 font-black text-xs px-5 py-3 rounded-xl transition-all shadow-lg hover:scale-105 duration-200 cursor-pointer"
                     >
-                      {token ? "Dự đoán ngay" : "Tạo tài khoản tham gia"} 🚀
+                      {token ? "Dự đoán ngay" : "Tạo tài khoản tham gia"}
                     </button>
                   </div>
                 </div>
@@ -336,7 +333,7 @@ const HomePage = () => {
                 {/* Real Leaderboard Top 3 - Loading from MongoDB */}
                 <div className="hidden lg:flex justify-end">
                   <div className="w-[380px] bg-[#07241d]/85 border border-teal-800/40 rounded-3xl p-5 shadow-2xl">
-                    <h3 className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest border-b border-teal-950 pb-2 mb-3">BXH Chuyên Gia Dự Đoán (Real DB)</h3>
+                    <h3 className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest border-b border-teal-950 pb-2 mb-3">BXH Chuyên Gia Dự Đoán</h3>
                     <div className="space-y-3">
                       {leaderboard.length === 0 ? (
                         <div className="text-xs text-slate-400 py-6 text-center font-medium">Chưa có điểm dự đoán được tính.</div>
@@ -428,7 +425,7 @@ const HomePage = () => {
                     return String(mTourId) === String(tournament._id || tournament.id);
                   });
                   if (tourMatches.length === 0) return null;
-                  
+
                   return (
                     <div key={tournament._id || tournament.id} className="space-y-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
                       <h3 className="text-base font-black text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
@@ -681,8 +678,7 @@ const HomePage = () => {
 
       {/* Footer */}
       <footer className="bg-[#05241b] text-slate-400 py-8 px-6 text-center border-t border-emerald-950 text-xs font-semibold flex-shrink-0">
-        <p>© 2026 {tournamentName} Management. All rights reserved.</p>
-        <p className="mt-1 text-slate-500">Được xây dựng trên nền tảng React, Node.js, Express và MongoDB.</p>
+        <p>© 2026 Football Zone. All rights reserved.</p>
       </footer>
     </div>
   );

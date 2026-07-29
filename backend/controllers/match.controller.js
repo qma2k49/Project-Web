@@ -156,7 +156,7 @@ const matchController = {
   triggerMatchEvent: async (req, res) => {
     try {
       const { matchId } = req.params;
-      const { type, minute, player, team, note, stoppageMinute = 0, personId, outgoingPlayerId, incomingPlayerId } = req.body;
+      const { type, minute, player, team, note, stoppageMinute = 0, personId, assistPlayerId, outgoingPlayerId, incomingPlayerId } = req.body;
       const displayMinute = stoppageMinute > 0 ? `${minute}+${stoppageMinute}` : minute;
 
       // Find player jersey number if personId exists
@@ -172,7 +172,15 @@ const matchController = {
       if (type === 'StartHalf' || type === 'EndHalf') {
         eventNote = note || (type === 'StartHalf' ? 'Bắt đầu hiệp đấu' : 'Kết thúc hiệp đấu');
       } else {
-        eventNote = `${shirtPrefix}${player || ''} (${team === 'home' ? 'Đội nhà' : 'Đội khách'}) - ${note || ''}`.trim();
+        let assistSuffix = "";
+        if (assistPlayerId) {
+          const assisterObj = await mongoose.model('Person').findById(assistPlayerId);
+          if (assisterObj) {
+            const assistShirt = assisterObj.get('jerseyNumber') !== undefined ? ` [#${assisterObj.get('jerseyNumber')}]` : "";
+            assistSuffix = ` (Kiến tạo: ${assisterObj.name}${assistShirt})`;
+          }
+        }
+        eventNote = `${shirtPrefix}${player || ''}${assistSuffix} (${team === 'home' ? 'Đội nhà' : 'Đội khách'}) - ${note || ''}`.trim();
       }
 
       const newEvent = await MatchEventModel.create({
@@ -181,17 +189,55 @@ const matchController = {
         minute,
         stoppageMinute,
         personId,
+        assistPlayerId,
         outgoingPlayerId,
         incomingPlayerId,
         note: eventNote,
       });
 
-      if (type === 'Goal') {
-        const match = await MatchModel.findById(matchId);
-        if (match) {
+      const match = await MatchModel.findById(matchId);
+      if (match) {
+        const tournamentId = match.tournamentId;
+        const PlayerStandingModel = mongoose.model('PlayerStanding');
+
+        if (type === 'Goal') {
           if (team === 'home') match.homeScore += 1;
           if (team === 'away') match.awayScore += 1;
           await match.save();
+
+          // Scorer Goals
+          if (personId) {
+            const teamId = team === 'home' ? match.homeTeam : match.awayTeam;
+            await PlayerStandingModel.findOneAndUpdate(
+              { tournamentId, playerId: personId },
+              { $inc: { goals: 1 }, $setOnInsert: { teamId } },
+              { upsert: true }
+            );
+          }
+
+          // Assist Player Assists
+          if (assistPlayerId) {
+            const teamId = team === 'home' ? match.homeTeam : match.awayTeam;
+            await PlayerStandingModel.findOneAndUpdate(
+              { tournamentId, playerId: assistPlayerId },
+              { $inc: { assists: 1 }, $setOnInsert: { teamId } },
+              { upsert: true }
+            );
+          }
+        } else if (type === 'YellowCard' && personId) {
+          const teamId = team === 'home' ? match.homeTeam : match.awayTeam;
+          await PlayerStandingModel.findOneAndUpdate(
+            { tournamentId, playerId: personId },
+            { $inc: { yellowCards: 1 }, $setOnInsert: { teamId } },
+            { upsert: true }
+          );
+        } else if (type === 'RedCard' && personId) {
+          const teamId = team === 'home' ? match.homeTeam : match.awayTeam;
+          await PlayerStandingModel.findOneAndUpdate(
+            { tournamentId, playerId: personId },
+            { $inc: { redCards: 1 }, $setOnInsert: { teamId } },
+            { upsert: true }
+          );
         }
       }
 

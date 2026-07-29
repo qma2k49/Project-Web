@@ -589,11 +589,11 @@ const AdminPage = () => {
           coaches={data.coaches}
         />
       </div>
-  );
-}
+    );
+  }
 
-return (
-  <div className="flex min-h-screen bg-[#f8faf9] text-slate-900 font-sans antialiased">
+  return (
+    <div className="flex min-h-screen bg-[#f8faf9] text-slate-900 font-sans antialiased">
       {/* Sidebar Navigation */}
       <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 

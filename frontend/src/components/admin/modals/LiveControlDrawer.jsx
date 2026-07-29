@@ -331,6 +331,7 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
         stoppageMinute: finalStoppage,
         player: values.player || selectedPlayer?.name || selectedPlayer?.fullName || selectedPlayer?.username || "Cầu thủ",
         personId: selectedPlayerId,
+        assistPlayerId: values.assistPlayerId || null,
         outgoingPlayerId: values.outgoingPlayer || null,
         incomingPlayerId: values.incomingPlayer || null,
         team: values.team,
@@ -599,7 +600,6 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
                   }))}
                 />
               </Form.Item>
-
               <Form.Item name="incomingPlayer" label="Cầu thủ vào sân">
                 <Select
                   size="large"
@@ -627,6 +627,30 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
                 }))}
               />
             </Form.Item>
+
+            {selectedEventType === "Goal" && (
+              <Form.Item noStyle dependencies={["selectedPlayerId"]}>
+                {({ getFieldValue }) => {
+                  const scorerId = getFieldValue("selectedPlayerId");
+                  const assistOptions = resolvedOnFieldPlayers
+                    .filter((p) => String(p._id || p.id) !== String(scorerId))
+                    .map((player) => ({
+                      value: player._id || player.id,
+                      label: player.name || player.fullName || player.username,
+                    }));
+                  return (
+                    <Form.Item name="assistPlayerId" label="Cầu thủ kiến tạo (nếu có)">
+                      <Select
+                        size="large"
+                        placeholder="Chọn cầu thủ kiến tạo"
+                        allowClear
+                        options={assistOptions}
+                      />
+                    </Form.Item>
+                  );
+                }}
+              </Form.Item>
+            )}
 
             <Form.Item name="player" label="Tên cầu thủ (tùy chọn)">
               <Input placeholder="Nhập tên cầu thủ nếu cần ghi thủ công..." size="large" />
