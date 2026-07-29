@@ -4,7 +4,7 @@ import { fetchDashboardOverview, fetchTopScorers, fetchTopAssists, fetchCardStat
 import { Trophy, Tv, Users, LogIn, LogOut, RefreshCw, Calendar, Shield, Sparkles, User, Goal, TrendingUp } from "lucide-react";
 import { LeaguesView } from "../components/admin";
 import OngoingMatches from "../components/dashboard/OngoingMatches";
-import { message, Spin, Carousel, Tabs, Progress, Badge, Statistic, Tooltip, Avatar } from "antd";
+import { message, Spin, Carousel, Tabs, Progress, Badge, Statistic, Tooltip, Avatar, Select } from "antd";
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState("matches"); // matches, leagues, stats
@@ -27,6 +27,7 @@ const HomePage = () => {
     cards: []
   });
 
+  const [selectedTournamentId, setSelectedTournamentId] = useState(null);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const userStr = localStorage.getItem("user");
@@ -43,13 +44,9 @@ const HomePage = () => {
       const overview = await fetchDashboardOverview();
       setData(overview);
 
-      // Load real prediction leaderboard from database
-      const ranking = await fetchPredictionLeaderboard();
-      setLeaderboard(Array.isArray(ranking) ? ranking : []);
-
-      // Load player statistics for the first tournament if available
       if (overview.tournaments && overview.tournaments.length > 0) {
-        await loadPlayerStats(overview.tournaments[0]._id || overview.tournaments[0].id);
+        const firstTourId = overview.tournaments[0]._id || overview.tournaments[0].id;
+        setSelectedTournamentId(firstTourId);
       }
     } catch (error) {
       message.error("Lỗi tải thông tin giải đấu!");
@@ -57,6 +54,21 @@ const HomePage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (selectedTournamentId) {
+      const syncLeaderboardAndStats = async () => {
+        try {
+          const ranking = await fetchPredictionLeaderboard(selectedTournamentId);
+          setLeaderboard(Array.isArray(ranking) ? ranking : []);
+          await loadPlayerStats(selectedTournamentId);
+        } catch (err) {
+          console.error("Lỗi tải BXH hoặc thống kê giải đấu:", err);
+        }
+      };
+      syncLeaderboardAndStats();
+    }
+  }, [selectedTournamentId]);
 
   const loadPlayerStats = async (tournamentId) => {
     try {
@@ -129,6 +141,11 @@ const HomePage = () => {
   const maxAssists = stats.assists.length > 0 ? Math.max(...stats.assists.map(a => a.assists || 0)) : 10;
   const maxYellowCards = stats.cards.length > 0 ? Math.max(...stats.cards.map(c => c.yellowCards || 0)) : 5;
 
+  const activeTournament = data.tournaments && data.tournaments.length > 0
+    ? data.tournaments.find(t => String(t._id || t.id) === String(selectedTournamentId)) || data.tournaments[0]
+    : null;
+  const tournamentName = activeTournament ? activeTournament.name : "Football Zone";
+
   return (
     <div className="min-h-screen bg-[#f3f7f5] text-slate-900 font-sans antialiased flex flex-col">
       {/* Premium Public Header */}
@@ -139,8 +156,8 @@ const HomePage = () => {
               ⚽
             </div>
             <div>
-              <h1 className="text-lg font-black tracking-tight leading-none text-emerald-400">ASEAN HYUNDAI CUP</h1>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 block">Hệ thống thông tin 2026</span>
+              <h1 className="text-lg font-black tracking-tight leading-none text-emerald-400 uppercase">FOOTBALL ZONE</h1>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 block">Hệ thống thông tin các giải đấu bóng đá trên hành tinh</span>
             </div>
           </div>
 
@@ -179,88 +196,118 @@ const HomePage = () => {
       {activeTab === "matches" && (
         <section className="bg-[#05241b] text-white relative overflow-hidden flex-shrink-0">
           <Carousel autoplay autoplaySpeed={6000} effect="fade" speed={800} className="w-full">
-            {/* Slide 1: Main Tournament Intro & Database Hero Match */}
-            <div className="relative py-14 px-6">
-              <div className="absolute top-[-50%] right-[-10%] w-[60%] h-[150%] bg-emerald-500/5 rounded-full blur-[120px]" />
-              <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                <div className="space-y-4">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-wider rounded-full">
-                    <Trophy className="w-3.5 h-3.5" />
-                    Cúp Bóng Đá Đông Nam Á 2026
-                  </span>
-                  <h2 className="text-4xl lg:text-5xl font-black tracking-tight leading-none text-white">
-                    ASEAN Hyundai Cup 2026
-                  </h2>
-                  <p className="text-slate-300 text-sm max-w-lg leading-relaxed">
-                    Sân chơi đỉnh cao của bóng đá Đông Nam Á. Cập nhật lịch thi đấu trực tuyến, sơ đồ thi đấu, sự kiện trực tiếp (bàn thắng, thẻ phạt, thay người) nhanh nhất từ MongoDB và Socket.io.
-                  </p>
-                  {!token && (
-                    <div className="pt-2">
-                      <button
-                        onClick={() => navigate("/login")}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-[#05241b] font-black text-xs px-5 py-3 rounded-xl transition-all shadow-lg hover:scale-105 duration-200 cursor-pointer"
-                      >
-                        Đăng nhập để nhận định & dự đoán tỷ số 🌟
-                      </button>
+            {/* Dynamic slides for each tournament in the database */}
+            {data.tournaments.map((tournament) => {
+              const tourMatches = (data.matches || []).filter(m => {
+                const mTourId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
+                return String(mTourId) === String(tournament._id || tournament.id);
+              });
+              
+              const tourLiveMatch = tourMatches.find(m => m.status === "LIVE");
+              const tourUpcomingMatch = tourMatches.find(m => m.status === "NOT STARTED");
+              const tourFinishedMatch = tourMatches.find(m => m.status === "FINISHED");
+              
+              let tourHeroMatch = null;
+              let tourHeroMatchTitle = "Trận đấu sắp tới";
+              let tourIsLive = false;
+              
+              if (tourLiveMatch) {
+                tourHeroMatch = tourLiveMatch;
+                tourHeroMatchTitle = "Trận đấu đang diễn ra";
+                tourIsLive = true;
+              } else if (tourUpcomingMatch) {
+                tourHeroMatch = tourUpcomingMatch;
+                tourHeroMatchTitle = "Trận đấu sắp tới";
+              } else if (tourFinishedMatch) {
+                tourHeroMatch = tourFinishedMatch;
+                tourHeroMatchTitle = "Kết quả mới nhất";
+              }
+              
+              return (
+                <div key={tournament._id || tournament.id} className="relative py-14 px-6">
+                  <div className="absolute top-[-50%] right-[-10%] w-[60%] h-[150%] bg-emerald-500/5 rounded-full blur-[120px]" />
+                  <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div className="space-y-4">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-wider rounded-full">
+                        <Trophy className="w-3.5 h-3.5" />
+                        Giải đấu đang diễn ra
+                      </span>
+                      <h2 className="text-4xl lg:text-5xl font-black tracking-tight leading-none text-white">
+                        {tournament.name}
+                      </h2>
+                      <p className="text-slate-300 text-sm max-w-lg leading-relaxed">
+                        Mùa giải {tournament.season || "2026"} • Thể thức {tournament.type === "CUP" ? "Cúp loại trực tiếp" : "Vòng tròn tính điểm"}. Cập nhật lịch thi đấu trực tuyến, sơ đồ thi đấu, sự kiện trực tiếp (bàn thắng, thẻ phạt, thay người) nhanh nhất.
+                      </p>
+                      {!token && (
+                        <div className="pt-2">
+                          <button
+                            onClick={() => navigate("/login")}
+                            className="bg-emerald-500 hover:bg-emerald-400 text-[#05241b] font-black text-xs px-5 py-3 rounded-xl transition-all shadow-lg hover:scale-105 duration-200 cursor-pointer"
+                          >
+                            Đăng nhập để nhận định & dự đoán tỷ số 🌟
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
+                    
+                    {/* Hero Match Visualizer */}
+                    <div className="hidden lg:flex justify-end">
+                      {tourHeroMatch ? (
+                        <div className="w-[380px] h-[200px] bg-[#0c3126] border border-emerald-800/40 rounded-3xl p-6 shadow-2xl flex flex-col justify-between hover:scale-105 transition-transform duration-300">
+                          <div className="flex justify-between items-center text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest">
+                            <span>{tourHeroMatchTitle}</span>
+                            {tourIsLive ? (
+                              <span className="flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                                <span className="text-rose-500 text-[10px]">TRỰC TIẾP</span>
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">
+                                {(typeof tourHeroMatch.roundName === "object" ? tourHeroMatch.roundName?.roundName : tourHeroMatch.roundName) || (tourHeroMatch.round ? `Vòng ${tourHeroMatch.round}` : "")}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex justify-between items-center py-4">
+                            <div className="text-center w-24">
+                              {getTeamLogo(tourHeroMatch.homeTeam) ? (
+                                <img src={getTeamLogo(tourHeroMatch.homeTeam)} alt="" className="w-10 h-10 rounded-full object-cover mx-auto mb-2 bg-slate-900/30 p-0.5 border border-emerald-800/30" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-[#05241b] border border-emerald-950 flex items-center justify-center mx-auto mb-2 text-sm font-bold">?</div>
+                              )}
+                              <span className="font-extrabold text-xs block truncate" title={getTeamName(tourHeroMatch.homeTeam)}>{getTeamName(tourHeroMatch.homeTeam)}</span>
+                            </div>
+                            <div className="text-center">
+                              <span className="text-2xl font-black font-mono tracking-widest text-emerald-400">
+                                {tourHeroMatch.status === "NOT STARTED" ? "VS" : `${tourHeroMatch.homeScore} - ${tourHeroMatch.awayScore}`}
+                              </span>
+                              <span className="block text-[9px] text-slate-400 font-bold mt-1 uppercase">
+                                {tourHeroMatch.status === "LIVE" ? "Hiệp đấu" : tourHeroMatch.status === "FINISHED" ? "Đã xong" : "Chưa đá"}
+                              </span>
+                            </div>
+                            <div className="text-center w-24">
+                              {getTeamLogo(tourHeroMatch.awayTeam) ? (
+                                <img src={getTeamLogo(tourHeroMatch.awayTeam)} alt="" className="w-10 h-10 rounded-full object-cover mx-auto mb-2 bg-slate-900/30 p-0.5 border border-emerald-800/30" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-[#05241b] border border-emerald-950 flex items-center justify-center mx-auto mb-2 text-sm font-bold">?</div>
+                              )}
+                              <span className="font-extrabold text-xs block truncate" title={getTeamName(tourHeroMatch.awayTeam)}>{getTeamName(tourHeroMatch.awayTeam)}</span>
+                            </div>
+                          </div>
+                          <div className="text-[9px] text-slate-400 text-center font-medium truncate">
+                            Sân: {tourHeroMatch.stadium?.name || "Chưa chọn sân"}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-[380px] h-[200px] bg-[#0c3126] border border-emerald-800/40 rounded-3xl p-6 shadow-2xl flex flex-col justify-center items-center text-center">
+                          <Shield className="w-8 h-8 text-emerald-500 mb-2" />
+                          <span className="text-xs text-slate-300 font-bold">Chưa xếp trận đấu nào cho giải đấu này</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-
-                {/* Hero Match Visualizer - Loading Real Data from MongoDB */}
-                <div className="hidden lg:flex justify-end">
-                  {heroMatch ? (
-                    <div className="w-[380px] h-[200px] bg-[#0c3126] border border-emerald-800/40 rounded-3xl p-6 shadow-2xl flex flex-col justify-between hover:scale-105 transition-transform duration-300">
-                      <div className="flex justify-between items-center text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest">
-                        <span>{heroMatchTitle}</span>
-                        {isLive ? (
-                          <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                            <span className="text-rose-500 text-[10px]">TRỰC TIẾP</span>
-                          </span>
-                        ) : (
-                           <span className="text-slate-400">{(typeof heroMatch.roundName === "object" ? heroMatch.roundName?.roundName : heroMatch.roundName) || (heroMatch.round ? `Vòng ${heroMatch.round}` : "")}</span>
-                        )}
-                      </div>
-                      <div className="flex justify-between items-center py-4">
-                        <div className="text-center w-24">
-                          {getTeamLogo(heroMatch.homeTeam) ? (
-                            <img src={getTeamLogo(heroMatch.homeTeam)} alt="" className="w-10 h-10 rounded-full object-cover mx-auto mb-2 bg-slate-900/30 p-0.5 border border-emerald-800/30" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-[#05241b] border border-emerald-950 flex items-center justify-center mx-auto mb-2 text-sm font-bold">?</div>
-                          )}
-                          <span className="font-extrabold text-xs block truncate" title={getTeamName(heroMatch.homeTeam)}>{getTeamName(heroMatch.homeTeam)}</span>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-2xl font-black font-mono tracking-widest text-emerald-400">
-                            {heroMatch.status === "NOT STARTED" ? "VS" : `${heroMatch.homeScore} - ${heroMatch.awayScore}`}
-                          </span>
-                          <span className="block text-[9px] text-slate-400 font-bold mt-1 uppercase">
-                            {heroMatch.status === "LIVE" ? "Hiệp đấu" : heroMatch.status === "FINISHED" ? "Đã xong" : "Chưa đá"}
-                          </span>
-                        </div>
-                        <div className="text-center w-24">
-                          {getTeamLogo(heroMatch.awayTeam) ? (
-                            <img src={getTeamLogo(heroMatch.awayTeam)} alt="" className="w-10 h-10 rounded-full object-cover mx-auto mb-2 bg-slate-900/30 p-0.5 border border-emerald-800/30" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-[#05241b] border border-emerald-950 flex items-center justify-center mx-auto mb-2 text-sm font-bold">?</div>
-                          )}
-                          <span className="font-extrabold text-xs block truncate" title={getTeamName(heroMatch.awayTeam)}>{getTeamName(heroMatch.awayTeam)}</span>
-                        </div>
-                      </div>
-                      <div className="text-[9px] text-slate-400 text-center font-medium truncate">
-                        Sân: {heroMatch.stadium?.name || "Chưa chọn sân"}
-                      </div>
-                    </div>
-                  ) : (
-                    // Fallback placeholder match card
-                    <div className="w-[380px] h-[200px] bg-[#0c3126] border border-emerald-800/40 rounded-3xl p-6 shadow-2xl flex flex-col justify-center items-center text-center">
-                      <Shield className="w-8 h-8 text-emerald-500 mb-2" />
-                      <span className="text-xs text-slate-300 font-bold">Chưa xếp trận đấu nào trong CSDL</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+              );
+            })}
 
             {/* Slide 2: Predictions Intro & Real Predictions Leaderboard */}
             <div className="relative py-14 px-6 bg-gradient-to-r from-teal-950 to-emerald-900">
@@ -300,7 +347,7 @@ const HomePage = () => {
                           return (
                             <div key={row._id || idx} className="flex justify-between items-center text-xs">
                               <span className="font-bold text-slate-300 flex items-center gap-1.5">
-                                <Avatar size="small" style={{ 
+                                <Avatar size="small" style={{
                                   backgroundColor: idx === 0 ? '#f59e0b' : idx === 1 ? '#cbd5e1' : '#b45309',
                                   color: idx === 1 ? '#1e293b' : '#ffffff',
                                   fontSize: '10px',
@@ -374,19 +421,36 @@ const HomePage = () => {
           <>
             {/* TAB 1: MATCHES LIST (Lịch thi đấu) */}
             {activeTab === "matches" && (
-              <div className="grid grid-cols-1 gap-8">
-                <OngoingMatches
-                  title="Trận đấu đang và sắp diễn ra"
-                  matches={(data.matches || []).filter((m) => m.status !== "FINISHED")}
-                  loading={loading}
-                  showControlBtn={false}
-                />
-                <OngoingMatches
-                  title="Trận đấu đã kết thúc"
-                  matches={(data.matches || []).filter((m) => m.status === "FINISHED")}
-                  loading={loading}
-                  showControlBtn={false}
-                />
+              <div className="space-y-8">
+                {data.tournaments.map(tournament => {
+                  const tourMatches = (data.matches || []).filter(m => {
+                    const mTourId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
+                    return String(mTourId) === String(tournament._id || tournament.id);
+                  });
+                  if (tourMatches.length === 0) return null;
+                  
+                  return (
+                    <div key={tournament._id || tournament.id} className="space-y-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-2xs">
+                      <h3 className="text-base font-black text-slate-800 border-b border-slate-100 pb-3 flex items-center gap-2">
+                        <Trophy className="w-4.5 h-4.5 text-emerald-600 animate-pulse" /> {tournament.name}
+                      </h3>
+                      <div className="grid grid-cols-1 gap-6">
+                        <OngoingMatches
+                          title="Trận đấu đang và sắp diễn ra"
+                          matches={tourMatches.filter((m) => m.status !== "FINISHED")}
+                          loading={loading}
+                          showControlBtn={false}
+                        />
+                        <OngoingMatches
+                          title="Trận đấu đã kết thúc"
+                          matches={tourMatches.filter((m) => m.status === "FINISHED")}
+                          loading={loading}
+                          showControlBtn={false}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -410,14 +474,28 @@ const HomePage = () => {
             {activeTab === "stats" && (
               <div className="space-y-8">
                 <div className="bg-white border border-slate-200/85 rounded-3xl p-6 shadow-2xs">
-                  <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-6">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-100 pb-3 mb-6 gap-3">
                     <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
                       <Trophy className="w-5.5 h-5.5 text-amber-500" />
                       Thống kê thành tích cá nhân xuất sắc nhất
                     </h3>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                      <TrendingUp className="w-3.5 h-3.5 text-emerald-600" /> Cập nhật trực tiếp
-                    </span>
+                    <div className="flex items-center gap-3">
+                      {data.tournaments && data.tournaments.length > 0 && (
+                        <Select
+                          value={selectedTournamentId || (data.tournaments[0]._id || data.tournaments[0].id)}
+                          onChange={(val) => setSelectedTournamentId(val)}
+                          style={{ width: 220 }}
+                          className="font-bold text-slate-800"
+                          options={data.tournaments.map(t => ({
+                            label: t.name,
+                            value: t._id || t.id
+                          }))}
+                        />
+                      )}
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1 shrink-0">
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" /> Cập nhật trực tiếp
+                      </span>
+                    </div>
                   </div>
 
                   {loadingStats ? (
@@ -427,7 +505,7 @@ const HomePage = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      
+
                       {/* Top Scorers */}
                       <div className="bg-slate-50/50 rounded-2xl border border-slate-200/60 p-5 hover:shadow-md transition-shadow duration-300">
                         <h4 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5 mb-4 uppercase tracking-wider border-b border-slate-100 pb-2">
@@ -603,7 +681,7 @@ const HomePage = () => {
 
       {/* Footer */}
       <footer className="bg-[#05241b] text-slate-400 py-8 px-6 text-center border-t border-emerald-950 text-xs font-semibold flex-shrink-0">
-        <p>© 2026 ASEAN Hyundai Cup Management. All rights reserved.</p>
+        <p>© 2026 {tournamentName} Management. All rights reserved.</p>
         <p className="mt-1 text-slate-500">Được xây dựng trên nền tảng React, Node.js, Express và MongoDB.</p>
       </footer>
     </div>

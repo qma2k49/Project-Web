@@ -162,8 +162,7 @@ const UserDashboardPage = () => {
               ⚽
             </div>
             <div>
-              <h1 className="text-lg font-black tracking-tight leading-none text-emerald-400">ASEAN HYUNDAI CUP</h1>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 block">Khu Vực Thành Viên</span>
+              <h1 className="text-lg font-black tracking-tight leading-none text-emerald-400">FOOTBALL ZONE</h1>
             </div>
           </div>
 
@@ -295,8 +294,7 @@ const UserDashboardPage = () => {
 
       {/* Footer */}
       <footer className="bg-[#05241b] text-slate-400 py-8 px-6 text-center border-t border-emerald-950 text-xs font-semibold flex-shrink-0">
-        <p>© 2026 ASEAN Hyundai Cup Management. All rights reserved.</p>
-        <p className="mt-1 text-slate-505">Được xây dựng trên nền tảng React, Node.js, Express và MongoDB.</p>
+        <p>© 2026 Football Zone. All rights reserved.</p>
       </footer>
     </div>
   );
