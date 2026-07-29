@@ -210,6 +210,13 @@ const matchController = {
           // Calculate predictions for this finished match
           try {
             const predictions = await PredictionModel.find({ matchId });
+            
+            // Find first Goal event for this match to check correct first scorer player
+            const firstGoalEvent = await MatchEventModel.findOne({
+              matchId: match._id,
+              eventType: 'Goal'
+            }).sort({ minute: 1, stoppageMinute: 1 });
+
             for (const pred of predictions) {
               const homeScore = match.homeScore || 0;
               const awayScore = match.awayScore || 0;
@@ -219,11 +226,41 @@ const matchController = {
               const exactMatch = (predHome === homeScore && predAway === awayScore);
               const realResult = Math.sign(homeScore - awayScore);
               const predResult = Math.sign(predHome - predAway);
-              const correctResult = (realResult === predResult);
+              const correctOutcome = (realResult === predResult);
 
               let points = 0;
-              if (exactMatch) points = 3;
-              else if (correctResult) points = 1;
+
+              // 1. Đoán đúng thắng/hòa/thua: +5 điểm
+              if (correctOutcome) {
+                points += 5;
+              }
+
+              // 2. Đúng bàn thắng của đội nào thì +3 điểm nữa
+              if (predHome === homeScore) {
+                points += 3;
+              }
+              if (predAway === awayScore) {
+                points += 3;
+              }
+
+              // 3. Đúng cầu thủ ghi bàn: +10 điểm
+              if (firstGoalEvent && pred.firstScorePlayer && String(firstGoalEvent.personId) === String(pred.firstScorePlayer)) {
+                points += 10;
+              }
+
+              // 4. Đúng khoảng cách bàn thắng giữa 2 đội (với điều kiện đúng thắng/hòa/thua): +10 điểm
+              if (correctOutcome) {
+                const realDiff = homeScore - awayScore;
+                const predDiff = predHome - predAway;
+                if (realDiff === predDiff) {
+                  points += 10;
+                }
+              }
+
+              // 5. Nếu chọn boost x2 thì cộng toàn bộ điểm ghi được rồi x2 lên
+              if (pred.x2Bonus) {
+                points = points * 2;
+              }
 
               pred.pointsEarned = points;
               pred.status = 'FINISHED';
@@ -248,7 +285,7 @@ const matchController = {
               leaderboardEntry.totalPoints += points;
               if (exactMatch) {
                 leaderboardEntry.exactMatches += 1;
-              } else if (correctResult) {
+              } else if (correctOutcome) {
                 leaderboardEntry.correctResults += 1;
               }
               await leaderboardEntry.save();

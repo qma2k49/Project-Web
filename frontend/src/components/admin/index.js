@@ -4,3 +4,4 @@ export { default as TeamsView } from "./TeamsView";
 export { default as StadiumsView } from "./StadiumsView";
 export { default as PersonnelView } from "./PersonnelView";
 export { default as LiveControlView } from "./LiveControlView";
+export { default as PredictionsView } from "./PredictionsView";

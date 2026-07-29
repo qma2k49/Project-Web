@@ -7,7 +7,8 @@ import {
   UserCheck,
   Radio,
   Settings,
-  LogOut
+  LogOut,
+  Sparkles
 } from "lucide-react";
 
 const navItems = [
@@ -17,7 +18,7 @@ const navItems = [
   { id: "stadiums", label: "Sân vận động", icon: Building2 },
   { id: "personnel", label: "Cầu thủ / Huấn luyện viên", icon: UserCheck },
   { id: "live", label: "Điều khiển trực tiếp", icon: Radio },
-  { id: "predictions", label: "Dự đoán", icon: Radio },
+  { id: "predictions", label: "Dự đoán", icon: Sparkles },
 ];
 
 const AdminSidebar = ({ activeTab = "dashboard", onTabChange }) => {

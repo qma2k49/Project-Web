@@ -10,7 +10,7 @@ import ExportStatsModal from "../components/admin/modals/ExportStatsModal";
 import { fetchDashboardOverview, fetchPersons, updateTeam, createStadium, updateStadium, createPerson, updatePerson } from "../api";
 import { Download, Plus, Trophy, Tv, Users, Cloud, RefreshCw, Search, Pencil, Upload } from "lucide-react";
 import { Modal, message, Input } from "antd";
-import { LeaguesView, TeamsView, StadiumsView, PersonnelView, LiveControlView, PageHeader } from "../components/admin";
+import { LeaguesView, TeamsView, StadiumsView, PersonnelView, LiveControlView, PageHeader, PredictionsView } from "../components/admin";
 import TeamEditModal from "../components/admin/modals/TeamEditModal";
 import StadiumModal from "../components/admin/modals/StadiumModal";
 import PersonModal from "../components/admin/modals/PersonModal";
@@ -346,6 +346,20 @@ const AdminPage = () => {
   });
 
   const selectedTeam = filteredTeams[0] || null;
+
+  if (activeTab === "predictions") {
+    return (
+      <div className="flex min-h-screen bg-[#f8faf9] text-slate-900 font-sans antialiased">
+        <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <AdminHeader title="Quản lý nhận định & BXH" />
+          <main className="flex-1 p-8 max-w-7xl w-full mx-auto">
+            <PredictionsView tournaments={data.tournaments} loadingOverview={loading} />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   if (isLeaguesView) {
     return (

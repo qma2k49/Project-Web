@@ -163,6 +163,28 @@ export const fetchPredictionLeaderboard = async (tournamentId) => {
   return res.data;
 };
 
+// Admin Prediction APIs
+export const fetchAllPredictions = async (token) => {
+  const res = await api.get("/predictions/all-predictions", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+};
+
+export const updateLeaderboardScore = async (id, scoreData, token) => {
+  const res = await api.put(`/predictions/leaderboard/${id}`, scoreData, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+};
+
+export const recalculatePredictionPoints = async (tournamentId, token) => {
+  const res = await api.post("/predictions/recalculate", { tournamentId }, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+};
+
 // Player Standing APIs
 export const fetchTopScorers = async (tournamentId) => {
   const res = await api.get(`/player-standings/scorers/${tournamentId}`);
