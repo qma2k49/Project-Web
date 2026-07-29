@@ -242,6 +242,7 @@ const UserDashboardPage = () => {
             {/* TAB 1: PREDICTIONS PANEL */}
             {activeTab === "predict" && (
               <UserPredictView
+                tournaments={data.tournaments}
                 predictionMatches={predictionMatches}
                 myPredictions={myPredictions}
                 allPlayers={allPlayers}

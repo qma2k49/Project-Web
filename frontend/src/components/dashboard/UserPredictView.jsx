@@ -3,7 +3,10 @@ import { message, Modal, InputNumber, Select, Checkbox, Statistic } from "antd";
 import { Sparkles, Trophy, Calendar, Edit3, Award } from "lucide-react";
 import { submitPrediction, fetchMyPredictions } from "../../api";
 
+const { Option } = Select;
+
 const UserPredictView = ({
+  tournaments = [],
   predictionMatches = [],
   myPredictions = [],
   allPlayers = [],
@@ -11,6 +14,7 @@ const UserPredictView = ({
   setMyPredictions,
   loadData
 }) => {
+  const [selectedTournamentId, setSelectedTournamentId] = useState(null);
   const [isPredictionModalOpen, setIsPredictionModalOpen] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [predictScores, setPredictScores] = useState({ home: 0, away: 0 });
@@ -65,11 +69,11 @@ const UserPredictView = ({
       };
       await submitPrediction(payload, token);
       message.success("Lưu dự đoán tỷ số thành công!");
-      
+
       // Reload predictions
       const predictions = await fetchMyPredictions(token);
       setMyPredictions(Array.isArray(predictions) ? predictions : []);
-      
+
       setIsPredictionModalOpen(false);
       setSelectedMatch(null);
     } catch (error) {
@@ -79,16 +83,83 @@ const UserPredictView = ({
     }
   };
 
+  const selectedTournament = tournaments.find(t => String(t._id || t.id) === String(selectedTournamentId));
+
+  // If no tournament is selected yet, render the list of tournaments
+  if (!selectedTournament) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-2xs">
+          <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-4 mb-6">
+            <Trophy className="w-5.5 h-5.5 text-emerald-600" />
+            Chọn giải đấu để dự đoán tỷ số
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {tournaments.map((t) => {
+              const tourMatches = predictionMatches.filter(m => {
+                const mTourId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
+                return String(mTourId) === String(t._id || t.id);
+              });
+
+              return (
+                <div
+                  key={t._id || t.id}
+                  onClick={() => setSelectedTournamentId(t._id || t.id)}
+                  className="bg-white rounded-3xl border border-slate-200 p-6 shadow-2xs hover:shadow-md hover:border-emerald-500/40 transition-all duration-300 cursor-pointer flex flex-col justify-between gap-4 group"
+                >
+                  <div className="space-y-2">
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-700 px-2.5 py-0.5 rounded font-black uppercase tracking-wider">
+                      {t.season || "Mùa giải 2026"}
+                    </span>
+                    <h4 className="font-black text-base text-slate-850 group-hover:text-emerald-700 transition-colors">
+                      {t.name}
+                    </h4>
+                    <p className="text-xs text-slate-400 font-medium">
+                      Thể thức: {t.type === "CUP" ? "Cúp loại trực tiếp" : "Vòng tròn tính điểm"}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-2">
+                    <span className="text-xs text-slate-500 font-bold">
+                      {tourMatches.length} trận đấu
+                    </span>
+                    <span className="text-xs font-black text-emerald-600 group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                      Vào dự đoán →
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter matches for the selected tournament
+  const filteredMatches = predictionMatches.filter(m => {
+    const mTourId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
+    return String(mTourId) === String(selectedTournamentId);
+  });
+
   return (
     <div className="space-y-6">
       <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-2xs">
         <div className="border-b border-slate-100 pb-4 mb-6 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-          <div>
-            <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-              <Award className="w-5.5 h-5.5 text-emerald-600" />
-              Dự đoán tỷ số trận đấu sắp diễn ra
-            </h3>
-            <p className="text-xs text-slate-400 font-medium mt-1">Dự đoán đúng tỷ số nhận ngay 3 điểm, đúng kết quả thắng/hòa nhận 1 điểm tích lũy.</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedTournamentId(null)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-black transition-colors cursor-pointer border border-slate-200 shadow-3xs"
+            >
+              ← Quay lại
+            </button>
+            <div>
+              <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                <Award className="w-5.5 h-5.5 text-emerald-600" />
+                Dự đoán: {selectedTournament.name}
+              </h3>
+            </div>
           </div>
           <button
             onClick={loadData}
@@ -100,15 +171,15 @@ const UserPredictView = ({
 
         {/* List of upcoming matches for prediction (Responsive Grid layout) */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {predictionMatches.length === 0 ? (
+          {filteredMatches.length === 0 ? (
             <div className="col-span-full py-16 text-center text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 font-medium text-xs">
-              Hiện tại không có trận đấu nào để hiển thị.
+              Hiện tại không có trận đấu nào để hiển thị cho giải đấu này.
             </div>
           ) : (
-            predictionMatches.map((match) => {
+            filteredMatches.map((match) => {
               const existingPred = myPredictions.find(p => String(p.matchId) === String(match._id || match.id));
               const tName = typeof match.tournamentId === "object" ? match.tournamentId?.name : "ASEAN Hyundai Cup";
-              
+
               const matchTimeMs = new Date(match.matchTime || match.date).getTime();
               const isUpcoming = matchTimeMs > Date.now();
 
@@ -123,7 +194,7 @@ const UserPredictView = ({
                       <span className="font-extrabold text-[9px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 uppercase tracking-wider truncate max-w-[150px]">
                         {(typeof match.roundName === "object" ? match.roundName?.roundName : match.roundName) || (match.round ? `Vòng ${match.round}` : "")} • {tName}
                       </span>
-                      
+
                       {/* Status badge */}
                       {isUpcoming && match.status === "NOT STARTED" ? (
                         <span className="inline-flex items-center gap-1 font-black text-amber-400 text-[9px] bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20 uppercase tracking-wider">
@@ -199,10 +270,10 @@ const UserPredictView = ({
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-505" />
                           Còn lại
                         </span>
-                        <Statistic.Countdown 
-                          value={matchTimeMs} 
-                          format="D[d] H:m:s" 
-                          valueStyle={{ fontSize: '11px', color: '#b45309', fontWeight: '950', fontFamily: 'monospace', lineHeight: 1 }} 
+                        <Statistic.Countdown
+                          value={matchTimeMs}
+                          format="D[d] H:m:s"
+                          valueStyle={{ fontSize: '11px', color: '#b45309', fontWeight: '950', fontFamily: 'monospace', lineHeight: 1 }}
                         />
                       </div>
                     )}
@@ -210,13 +281,12 @@ const UserPredictView = ({
                     {/* Prediction details */}
                     <div className="space-y-2">
                       <div className="text-[9.5px] font-black text-slate-455 uppercase tracking-wider mb-1">Nhận định của bạn</div>
-                      
+
                       {/* Score Prediction Row */}
-                      <div className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold ${
-                        existingPred 
+                      <div className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold ${existingPred
                           ? (existingPred.x2Bonus ? 'bg-amber-50/30 border-amber-200/80 shadow-3xs' : 'bg-slate-55 border-slate-150')
                           : 'bg-slate-50 border-slate-105 border-dashed text-slate-400'
-                      }`}>
+                        }`}>
                         <span className="font-extrabold text-slate-500">Tỷ số trận đấu</span>
                         {existingPred ? (
                           <div className="flex items-center gap-1">
@@ -233,11 +303,10 @@ const UserPredictView = ({
                       </div>
 
                       {/* Scorer Prediction Row */}
-                      <div className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold ${
-                        existingPred && existingPred.firstScorePlayer
+                      <div className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-semibold ${existingPred && existingPred.firstScorePlayer
                           ? 'bg-slate-55 border-slate-150'
                           : 'bg-slate-50 border-slate-105 border-dashed text-slate-400'
-                      }`}>
+                        }`}>
                         <span className="font-extrabold text-slate-500">Cầu thủ ghi bàn đầu</span>
                         {existingPred && existingPred.firstScorePlayer ? (
                           <span className="font-bold text-slate-800 text-[10px] flex items-center gap-1 max-w-[130px] truncate">
@@ -258,11 +327,10 @@ const UserPredictView = ({
                     {/* Points Earned display */}
                     <div className="flex items-center gap-1.5">
                       <span className="text-[9px] text-slate-500 font-extrabold uppercase">Điểm</span>
-                      <span className={`text-[11px] font-black font-mono px-2 py-0.5 rounded ${
-                        match.status === "FINISHED"
+                      <span className={`text-[11px] font-black font-mono px-2 py-0.5 rounded ${match.status === "FINISHED"
                           ? ((existingPred?.pointsEarned || 0) > 0 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-slate-800 text-slate-450")
                           : "bg-slate-800 text-slate-455"
-                      }`}>
+                        }`}>
                         {match.status === "FINISHED" ? `+${existingPred?.pointsEarned || 0}đ` : "⏳ Chờ"}
                       </span>
                     </div>
