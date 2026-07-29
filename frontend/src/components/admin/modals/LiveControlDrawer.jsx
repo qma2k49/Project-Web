@@ -294,15 +294,41 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
     }
   };
 
+  const calculateCurrentMinute = (seconds) => {
+    const totalMinutes = Math.floor(seconds / 60);
+    if (seconds >= 90 * 60) {
+      return {
+        minute: 90,
+        stoppageMinute: totalMinutes - 90 + 1
+      };
+    }
+    return {
+      minute: totalMinutes + 1,
+      stoppageMinute: 0
+    };
+  };
+
   const handleSendEvent = async (values) => {
     try {
       setLoading(true);
       const selectedPlayerId = values.selectedPlayerId || values.outgoingPlayer || values.incomingPlayer || null;
       const selectedPlayer = resolvedOnFieldPlayers.find((player) => (player._id || player.id) === selectedPlayerId) || resolvedBenchPlayers.find((player) => (player._id || player.id) === selectedPlayerId);
+      
+      // Calculate minute and stoppage time automatically based on clock
+      let finalMinute = 1;
+      let finalStoppage = 0;
+      if (match.status === "FINISHED") {
+        finalMinute = 90;
+      } else {
+        const { minute: calcMin, stoppageMinute: calcStop } = calculateCurrentMinute(matchClock.elapsedSeconds);
+        finalMinute = calcMin;
+        finalStoppage = calcStop;
+      }
+
       const eventData = {
         type: values.eventType,
-        minute: values.minute,
-        stoppageMinute: values.stoppageMinute || 0,
+        minute: finalMinute,
+        stoppageMinute: finalStoppage,
         player: values.player || selectedPlayer?.name || selectedPlayer?.fullName || selectedPlayer?.username || "Cầu thủ",
         personId: selectedPlayerId,
         outgoingPlayerId: values.outgoingPlayer || null,
@@ -499,8 +525,6 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
         initialValues={{
           eventType: "Goal",
           team: "home",
-          minute: 45,
-          stoppageMinute: 0,
         }}
       >
         <Form.Item name="eventType" label="Loại sự kiện" rules={[{ required: true }]}>
@@ -552,20 +576,12 @@ const LiveControlDrawer = ({ visible, onClose, match, onEventTriggered }) => {
           <p className="mt-2 text-sm text-slate-600">{activeEventMeta.description}</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="mb-4">
           <Form.Item name="team" label="Đội thực hiện" rules={[{ required: true }]}> 
             <Select size="large">
               <Option value="home">{homeName} (Đội nhà)</Option>
               <Option value="away">{awayName} (Đội khách)</Option>
             </Select>
-          </Form.Item>
-
-          <Form.Item name="minute" label="Phút thi đấu" rules={[{ required: true }]}>
-            <InputNumber min={1} max={120} className="w-full" size="large" />
-          </Form.Item>
-
-          <Form.Item name="stoppageMinute" label="Phút bù giờ">
-            <InputNumber min={0} max={10} className="w-full" size="large" />
           </Form.Item>
         </div>
 

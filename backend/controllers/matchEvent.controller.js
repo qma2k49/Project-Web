@@ -1,5 +1,6 @@
 import MatchEventModel from '../models/matchEvent.model.js';
 import MatchModel from '../models/match.model.js';
+import mongoose from 'mongoose';
 
 const matchEventController = {
   getEventsByMatch: async (req, res) => {
@@ -8,6 +9,8 @@ const matchEventController = {
       const events = await MatchEventModel.find({ matchId })
         .populate('teamId')
         .populate('personId')
+        .populate('outgoingPlayerId')
+        .populate('incomingPlayerId')
         .sort({ minute: 1 });
       res.status(200).json(events);
     } catch (error) {
@@ -20,6 +23,22 @@ const matchEventController = {
       const { matchId, teamId, personId, outgoingPlayerId, incomingPlayerId, minute, stoppageMinute = 0, eventType, note } = req.body;
       const displayMinute = stoppageMinute > 0 ? `${minute}+${stoppageMinute}` : minute;
 
+      // Find player jersey number if personId exists
+      let shirtPrefix = "";
+      if (personId) {
+        const playerObj = await mongoose.model('Person').findById(personId);
+        if (playerObj && playerObj.get('jerseyNumber') !== undefined) {
+          shirtPrefix = `[#${playerObj.get('jerseyNumber')}] `;
+        }
+      }
+
+      let eventNote = "";
+      if (eventType === 'StartHalf' || eventType === 'EndHalf') {
+        eventNote = note || (eventType === 'StartHalf' ? 'Bắt đầu hiệp đấu' : 'Kết thúc hiệp đấu');
+      } else {
+        eventNote = `${shirtPrefix}${note || ''}`.trim();
+      }
+
       const event = await MatchEventModel.create({
         matchId,
         teamId,
@@ -29,7 +48,7 @@ const matchEventController = {
         minute,
         stoppageMinute,
         eventType,
-        note: `${displayMinute} - ${note || ''}`.trim(),
+        note: eventNote,
       });
 
       if (eventType === 'Goal' || eventType === 'OwnGoal') {

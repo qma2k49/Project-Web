@@ -85,6 +85,56 @@ const OngoingMatches = ({
     }
   };
 
+  const formatEventNote = (evt) => {
+    if (evt.eventType === "StartHalf" || evt.eventType === "EndHalf") {
+      let note = evt.note || "";
+      note = note.replace(/^\d+(\+\d+)?\s*(-)?\s*/, "");
+      note = note.replace(/^System\s*(\([^)]+\))?\s*(-)?\s*/i, "");
+      return note;
+    }
+
+    if (evt.eventType === "Substitution" && evt.incomingPlayerId && evt.outgoingPlayerId) {
+      const inNum = evt.incomingPlayerId.jerseyNumber !== undefined ? `${evt.incomingPlayerId.jerseyNumber} - ` : "";
+      const outNum = evt.outgoingPlayerId.jerseyNumber !== undefined ? `${evt.outgoingPlayerId.jerseyNumber} - ` : "";
+      const inName = evt.incomingPlayerId.name || "";
+      const outName = evt.outgoingPlayerId.name || "";
+      return (
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-100/60 text-[10px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Vào sân: {inNum}{inName}
+          </span>
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 font-bold border border-rose-100/60 text-[10px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Rời sân: {outNum}{outName}
+          </span>
+        </span>
+      );
+    }
+
+    if (evt.personId && evt.personId.jerseyNumber !== undefined) {
+      const jersey = evt.personId.jerseyNumber;
+      const name = evt.personId.name || "";
+
+      // Extract any extra notes (e.g. "Ghi bàn", "Thẻ vàng")
+      let extra = "";
+      const noteStr = evt.note || "";
+      if (noteStr.includes(" - ")) {
+        const parts = noteStr.split(" - ");
+        const lastPart = parts[parts.length - 1];
+        if (lastPart && !lastPart.includes(name) && !lastPart.includes("Đội nhà") && !lastPart.includes("Đội khách")) {
+          extra = lastPart;
+        }
+      }
+      return `${jersey} - ${name}${extra ? ` (${extra})` : ""}`;
+    }
+
+    let note = evt.note || "";
+    // Clean up leading display minutes
+    note = note.replace(/^\d+(\+\d+)?\s*(-)?\s*/, "");
+    // Clean up leading [#7] shirt numbers
+    note = note.replace(/^\[#\d+\]\s*/, "");
+    return note;
+  };
+
   return (
     <div className="bg-white border border-gray-200/90 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
       {/* Header */}
@@ -123,8 +173,8 @@ const OngoingMatches = ({
                 const isLive = match.status === "LIVE";
 
                 return (
-                  <tr 
-                    key={match._id || match.id} 
+                  <tr
+                    key={match._id || match.id}
                     onClick={() => handleMatchClick(match)}
                     className="hover:bg-slate-50/90 transition-colors align-middle cursor-pointer select-none"
                     title="Click để xem diễn biến chi tiết trận đấu"
@@ -282,15 +332,15 @@ const OngoingMatches = ({
                           </span>
                           <span className="font-extrabold text-[10px] text-slate-800 uppercase tracking-wider">
                             {evt.eventType === "Goal" ? "BÀN THẮNG" :
-                             evt.eventType === "OwnGoal" ? "BÀN PHẢN LƯỚI" :
-                             evt.eventType === "YellowCard" ? "THẺ VÀNG" :
-                             evt.eventType === "RedCard" ? "THẺ ĐỎ" :
-                             evt.eventType === "Substitution" ? "THAY NGƯỜI" :
-                             evt.eventType === "StartHalf" ? "BẮT ĐẦU HIỆP ĐẤU" :
-                             evt.eventType === "EndHalf" ? "KẾT THÚC HIỆP ĐẤU" : evt.eventType}
+                              evt.eventType === "OwnGoal" ? "BÀN PHẢN LƯỚI" :
+                                evt.eventType === "YellowCard" ? "THẺ VÀNG" :
+                                  evt.eventType === "RedCard" ? "THẺ ĐỎ" :
+                                    evt.eventType === "Substitution" ? "THAY NGƯỜI" :
+                                      evt.eventType === "StartHalf" ? "BẮT ĐẦU HIỆP ĐẤU" :
+                                        evt.eventType === "EndHalf" ? "KẾT THÚC HIỆP ĐẤU" : evt.eventType}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed">{evt.note || ""}</p>
+                        <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed">{formatEventNote(evt)}</p>
                       </div>
                     )
                   }))}
@@ -300,7 +350,7 @@ const OngoingMatches = ({
           </div>
         )}
       </Modal>
-    </div>
+    </div >
   );
 };
 

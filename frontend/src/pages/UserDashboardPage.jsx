@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { fetchDashboardOverview, fetchMyPredictions, submitPrediction, fetchPredictionLeaderboard, fetchTopScorers, fetchTopAssists, fetchCardStatistics } from "../api";
 import { Trophy, Tv, Users, LogOut, RefreshCw, Calendar, Shield, Sparkles, User, Goal, Edit3, Award, MapPin, TrendingUp } from "lucide-react";
 import { LeaguesView } from "../components/admin";
-import { message, Modal, InputNumber, Spin, Tabs, Progress, Badge, Statistic, Tooltip, Avatar } from "antd";
+import { message, Modal, InputNumber, Spin, Tabs, Progress, Badge, Statistic, Tooltip, Avatar, Select } from "antd";
 
 const UserDashboardPage = () => {
   const [activeTab, setActiveTab] = useState("predict"); // predict, leaderboard, leagues, stats
@@ -24,6 +24,8 @@ const UserDashboardPage = () => {
     assists: [],
     cards: []
   });
+
+  const [leaderboardTournamentId, setLeaderboardTournamentId] = useState(null);
 
   // Modal prediction states
   const [isPredictionModalOpen, setIsPredictionModalOpen] = useState(false);
@@ -63,7 +65,9 @@ const UserDashboardPage = () => {
 
       // Load statistics for first tournament
       if (overview.tournaments && overview.tournaments.length > 0) {
-        await loadPlayerStats(overview.tournaments[0]._id || overview.tournaments[0].id);
+        const defaultTournamentId = overview.tournaments[0]._id || overview.tournaments[0].id;
+        setLeaderboardTournamentId(defaultTournamentId);
+        await loadPlayerStats(defaultTournamentId);
       }
     } catch (error) {
       message.error("Lỗi tải thông tin giải đấu!");
@@ -93,10 +97,10 @@ const UserDashboardPage = () => {
     }
   };
 
-  const loadLeaderboardData = async () => {
+  const loadLeaderboardData = async (tId = leaderboardTournamentId) => {
     try {
       setLoadingLeaderboard(true);
-      const ranking = await fetchPredictionLeaderboard();
+      const ranking = await fetchPredictionLeaderboard(tId);
       setLeaderboard(Array.isArray(ranking) ? ranking : []);
     } catch (error) {
       message.error("Không thể tải bảng xếp hạng dự đoán!");
@@ -112,10 +116,10 @@ const UserDashboardPage = () => {
   }, [token]);
 
   useEffect(() => {
-    if (activeTab === "leaderboard") {
-      loadLeaderboardData();
+    if (activeTab === "leaderboard" && leaderboardTournamentId) {
+      loadLeaderboardData(leaderboardTournamentId);
     }
-  }, [activeTab]);
+  }, [activeTab, leaderboardTournamentId]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -183,8 +187,8 @@ const UserDashboardPage = () => {
 
   if (!currentUser) return null;
 
-  // Filter matches that are upcoming (NOT STARTED) for prediction
-  const upcomingMatches = (data.matches || []).filter(m => m.status === "NOT STARTED");
+  // Load all matches for prediction feed so users can compare scores
+  const predictionMatches = data.matches || [];
 
   // Calculate relative stats progress
   const maxGoals = stats.scorers.length > 0 ? Math.max(...stats.scorers.map(s => s.goals || 0)) : 10;
@@ -303,12 +307,12 @@ const UserDashboardPage = () => {
 
                   {/* List of upcoming matches for prediction */}
                   <div className="space-y-4">
-                    {upcomingMatches.length === 0 ? (
+                    {predictionMatches.length === 0 ? (
                       <div className="py-16 text-center text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 font-medium text-xs">
-                        Hiện tại không có trận đấu nào sắp diễn ra để dự đoán.
+                        Hiện tại không có trận đấu nào để hiển thị.
                       </div>
                     ) : (
-                      upcomingMatches.map((match) => {
+                      predictionMatches.map((match) => {
                         const existingPred = myPredictions.find(p => String(p.matchId) === String(match._id || match.id));
                         const tName = typeof match.tournamentId === "object" ? match.tournamentId?.name : "ASEAN Hyundai Cup";
                         
@@ -331,8 +335,8 @@ const UserDashboardPage = () => {
                                 <span>{formatDate(match.matchTime || match.date)}</span>
                               </div>
                               
-                              {/* Ant Design Live Ticking Countdown Clock */}
-                              {isUpcoming ? (
+                              {/* Ant Design Live Ticking Countdown Clock / Live Badges */}
+                              {isUpcoming && match.status === "NOT STARTED" ? (
                                 <div className="bg-amber-50/60 border border-amber-100 rounded-xl px-3 py-1.5 w-max">
                                   <span className="text-[9px] text-amber-600 font-black uppercase tracking-wider flex items-center gap-1 mb-0.5 animate-pulse">
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -344,8 +348,19 @@ const UserDashboardPage = () => {
                                     valueStyle={{ fontSize: '11px', color: '#b45309', fontWeight: '950', fontFamily: 'monospace' }} 
                                   />
                                 </div>
+                              ) : match.status === "LIVE" ? (
+                                <span className="inline-flex items-center gap-1.5 font-bold text-rose-600 text-[10px] bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                                  TRỰC TIẾP ĐANG ĐÁ
+                                </span>
+                              ) : match.status === "FINISHED" ? (
+                                <span className="inline-flex items-center gap-1.5 font-bold text-slate-500 text-[10px] bg-slate-55 px-2 py-0.5 rounded-md border border-slate-200 uppercase tracking-wider">
+                                  KẾT THÚC
+                                </span>
                               ) : (
-                                <Badge status="processing" text={<span className="text-[10px] font-bold text-slate-400 uppercase">Sắp khởi tranh</span>} />
+                                <span className="inline-flex items-center gap-1.5 font-bold text-amber-600 text-[10px] bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 uppercase tracking-wider">
+                                  ĐÃ KHÓA NHẬN ĐỊNH
+                                </span>
                               )}
                             </div>
 
@@ -363,9 +378,15 @@ const UserDashboardPage = () => {
                                 )}
                               </div>
 
-                              <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center font-black text-slate-400 text-xs tracking-wider flex-shrink-0">
-                                VS
-                              </div>
+                              {match.status === "NOT STARTED" ? (
+                                <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200/80 flex items-center justify-center font-black text-slate-400 text-xs tracking-wider flex-shrink-0">
+                                  VS
+                                </div>
+                              ) : (
+                                <div className="w-14 h-10 rounded-full bg-emerald-50 border border-emerald-250 flex items-center justify-center font-black text-emerald-800 text-sm font-mono tracking-wider flex-shrink-0 shadow-3xs">
+                                  {match.homeScore} - {match.awayScore}
+                                </div>
+                              )}
 
                               {/* Away Team */}
                               <div className="flex items-center gap-2.5 w-[110px] justify-start">
@@ -381,33 +402,49 @@ const UserDashboardPage = () => {
                             </div>
 
                             {/* User Prediction display / Action button */}
-                            <div className="w-full lg:w-[220px] flex-shrink-0 flex items-center justify-end gap-3 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
-                              {existingPred ? (
-                                <div className="flex items-center justify-between w-full lg:justify-end gap-3">
-                                  <div className="text-right">
-                                    <span className="text-[10px] text-slate-400 font-bold block uppercase">Dự đoán của bạn</span>
-                                    <span className="font-mono font-black text-emerald-600 text-sm">
-                                      {existingPred.predictedHomeScore} - {existingPred.predictedAwayScore}
-                                    </span>
-                                  </div>
-                                  <button
-                                    onClick={() => openPredictionModal(match, existingPred)}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-emerald-700 px-3.5 py-2 text-xs font-bold transition-all cursor-pointer"
-                                  >
-                                    <Edit3 className="w-3.5 h-3.5" />
-                                    Thay đổi
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => openPredictionModal(match, null)}
-                                  className="w-full lg:w-auto bg-[#054432] hover:bg-[#033224] text-emerald-400 font-black px-4 py-2.5 rounded-xl text-xs tracking-wide uppercase transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
-                                >
-                                  <Sparkles className="w-3.5 h-3.5" />
-                                  Dự đoán tỷ số
-                                </button>
-                              )}
-                            </div>
+                             <div className="w-full lg:w-[220px] flex-shrink-0 flex items-center justify-end gap-3 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-100">
+                               {(!isUpcoming || match.status !== "NOT STARTED") ? (
+                                 existingPred ? (
+                                   <div className="text-right">
+                                     <span className="text-[10px] text-slate-400 font-bold block uppercase">🔒 Dự đoán (Đã khóa)</span>
+                                     <span className="font-mono font-black text-slate-450 text-sm">
+                                       {existingPred.predictedHomeScore} - {existingPred.predictedAwayScore}
+                                     </span>
+                                   </div>
+                                 ) : (
+                                   <button
+                                     disabled
+                                     className="w-full lg:w-auto bg-slate-100 text-slate-405 font-bold px-4 py-2.5 rounded-xl text-xs tracking-wide uppercase flex items-center justify-center gap-1.5 border border-slate-200 cursor-not-allowed"
+                                   >
+                                     🔒 Đã khóa dự đoán
+                                   </button>
+                                 )
+                               ) : existingPred ? (
+                                 <div className="flex items-center justify-between w-full lg:justify-end gap-3">
+                                   <div className="text-right">
+                                     <span className="text-[10px] text-slate-400 font-bold block uppercase">Dự đoán của bạn</span>
+                                     <span className="font-mono font-black text-emerald-600 text-sm">
+                                       {existingPred.predictedHomeScore} - {existingPred.predictedAwayScore}
+                                     </span>
+                                   </div>
+                                   <button
+                                     onClick={() => openPredictionModal(match, existingPred)}
+                                     className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-emerald-700 px-3.5 py-2 text-xs font-bold transition-all cursor-pointer"
+                                   >
+                                     <Edit3 className="w-3.5 h-3.5" />
+                                     Thay đổi
+                                   </button>
+                                 </div>
+                               ) : (
+                                 <button
+                                   onClick={() => openPredictionModal(match, null)}
+                                   className="w-full lg:w-auto bg-[#054432] hover:bg-[#033224] text-emerald-400 font-black px-4 py-2.5 rounded-xl text-xs tracking-wide uppercase transition-all flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                                 >
+                                   <Sparkles className="w-3.5 h-3.5" />
+                                   Dự đoán tỷ số
+                                 </button>
+                               )}
+                             </div>
                           </div>
                         );
                       })
@@ -420,10 +457,27 @@ const UserDashboardPage = () => {
             {/* TAB 2: LEADERBOARD */}
             {activeTab === "leaderboard" && (
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-2xs max-w-2xl mx-auto">
-                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-4 mb-6">
-                  <Award className="w-5.5 h-5.5 text-amber-500" />
-                  Bảng xếp hạng dự đoán của toàn bộ thành viên
-                </h3>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 pb-4 mb-6">
+                  <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                    <Award className="w-5.5 h-5.5 text-amber-500" />
+                    Bảng xếp hạng dự đoán
+                  </h3>
+                  {data.tournaments && data.tournaments.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Giải đấu:</span>
+                      <Select
+                        value={leaderboardTournamentId || (data.tournaments[0]._id || data.tournaments[0].id)}
+                        onChange={(val) => setLeaderboardTournamentId(val)}
+                        style={{ width: 200 }}
+                        className="font-bold text-slate-700"
+                        options={data.tournaments.map(t => ({
+                          label: t.name,
+                          value: t._id || t.id
+                        }))}
+                      />
+                    </div>
+                  )}
+                </div>
 
                 {loadingLeaderboard ? (
                   <div className="py-16 text-center">

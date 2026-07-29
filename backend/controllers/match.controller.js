@@ -3,6 +3,7 @@ import MatchEventModel from '../models/matchEvent.model.js';
 import MatchLineupModel from '../models/matchLineup.model.js';
 import PredictionModel from '../models/prediction.model.js';
 import PredictionLeaderboardModel from '../models/predictionLeaderboard.model.js';
+import mongoose from 'mongoose';
 
 const matchController = {
   getMatches: async (req, res) => {
@@ -68,7 +69,11 @@ const matchController = {
         .populate('tournamentId');
       if (!match) return res.status(404).json({ message: 'Không tìm thấy trận đấu' });
       
-      const events = await MatchEventModel.find({ matchId: req.params.id }).sort({ createdAt: -1 });
+      const events = await MatchEventModel.find({ matchId: req.params.id })
+        .populate('personId')
+        .populate('outgoingPlayerId')
+        .populate('incomingPlayerId')
+        .sort({ createdAt: -1 });
       const lineup = await MatchLineupModel.find({ matchId: req.params.id }).populate('personId');
 
       const matchObj = match.toObject();
@@ -151,6 +156,22 @@ const matchController = {
       const { type, minute, player, team, note, stoppageMinute = 0, personId, outgoingPlayerId, incomingPlayerId } = req.body;
       const displayMinute = stoppageMinute > 0 ? `${minute}+${stoppageMinute}` : minute;
 
+      // Find player jersey number if personId exists
+      let shirtPrefix = "";
+      if (personId) {
+        const playerObj = await mongoose.model('Person').findById(personId);
+        if (playerObj && playerObj.get('jerseyNumber') !== undefined) {
+          shirtPrefix = `[#${playerObj.get('jerseyNumber')}] `;
+        }
+      }
+
+      let eventNote = "";
+      if (type === 'StartHalf' || type === 'EndHalf') {
+        eventNote = note || (type === 'StartHalf' ? 'Bắt đầu hiệp đấu' : 'Kết thúc hiệp đấu');
+      } else {
+        eventNote = `${shirtPrefix}${player || ''} (${team === 'home' ? 'Đội nhà' : 'Đội khách'}) - ${note || ''}`.trim();
+      }
+
       const newEvent = await MatchEventModel.create({
         matchId,
         eventType: type,
@@ -159,7 +180,7 @@ const matchController = {
         personId,
         outgoingPlayerId,
         incomingPlayerId,
-        note: `${displayMinute} - ${player} (${team === 'home' ? 'Đội nhà' : 'Đội khách'}) - ${note || ''}`,
+        note: eventNote,
       });
 
       if (type === 'Goal') {

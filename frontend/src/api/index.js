@@ -157,8 +157,9 @@ export const fetchMyPredictions = async (token) => {
   return res.data;
 };
 
-export const fetchPredictionLeaderboard = async () => {
-  const res = await api.get("/predictions/leaderboard");
+export const fetchPredictionLeaderboard = async (tournamentId) => {
+  const url = tournamentId ? `/predictions/leaderboard?tournamentId=${tournamentId}` : "/predictions/leaderboard";
+  const res = await api.get(url);
   return res.data;
 };
 
