@@ -218,7 +218,7 @@ const HomePage = () => {
                             <span className="text-rose-500 text-[10px]">TRỰC TIẾP</span>
                           </span>
                         ) : (
-                          <span className="text-slate-400">Vòng {heroMatch.round || 1}</span>
+                           <span className="text-slate-400">{(typeof heroMatch.roundName === "object" ? heroMatch.roundName?.roundName : heroMatch.roundName) || (heroMatch.round ? `Vòng ${heroMatch.round}` : "")}</span>
                         )}
                       </div>
                       <div className="flex justify-between items-center py-4">

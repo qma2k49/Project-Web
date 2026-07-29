@@ -201,4 +201,10 @@ export const fetchCardStatistics = async (tournamentId) => {
   return res.data;
 };
 
+export const fetchRoundNames = async (tournamentId) => {
+  const url = tournamentId ? `/round-names-tournament?tournamentId=${tournamentId}` : "/round-names-tournament";
+  const res = await api.get(url);
+  return res.data;
+};
+
 export default api;

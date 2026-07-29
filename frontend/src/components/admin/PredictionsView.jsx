@@ -207,7 +207,7 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
         return (
           <div className="flex flex-col">
             <span className="font-extrabold text-slate-800 text-xs truncate max-w-[140px] block" title={tourName}>{tourName}</span>
-            <span className="text-[10px] text-slate-400 font-semibold">Vòng {match.round}</span>
+            <span className="text-[10px] text-slate-400 font-semibold">{(typeof match.roundName === "object" ? match.roundName?.roundName : match.roundName) || (match.round ? `Vòng ${match.round}` : "")}</span>
           </div>
         );
       }

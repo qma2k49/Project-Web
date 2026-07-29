@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Modal, Form, Select, DatePicker, InputNumber, message, Button } from "antd";
 import { PlusCircle } from "lucide-react";
-import { createMatch } from "../../../api";
+import { createMatch, fetchRoundNames } from "../../../api";
 
 const { Option } = Select;
 
@@ -9,6 +9,25 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [selectedHomeTeam, setSelectedHomeTeam] = useState(null);
+  const [roundNamesList, setRoundNamesList] = useState([]);
+  const [loadingRounds, setLoadingRounds] = useState(false);
+
+  const handleTournamentChange = async (tournamentId) => {
+    if (!tournamentId) {
+      setRoundNamesList([]);
+      return;
+    }
+    try {
+      setLoadingRounds(true);
+      const list = await fetchRoundNames(tournamentId);
+      setRoundNamesList(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Lỗi tải danh sách tên vòng đấu:", err);
+      message.error("Lỗi tải danh sách tên vòng đấu!");
+    } finally {
+      setLoadingRounds(false);
+    }
+  };
 
   const handleSubmit = async (values) => {
     try {
@@ -24,7 +43,7 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
         homeTeam: values.homeTeam,
         awayTeam: values.awayTeam,
         stadium: values.stadium,
-        round: values.round || 1,
+        roundName: values.roundName,
         matchTime: values.matchTime ? values.matchTime.toDate() : new Date(),
         status: values.status || "NOT STARTED",
         homeScore: values.homeScore || 0,
@@ -32,9 +51,10 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
       };
 
       await createMatch(matchData);
-      message.success("Đã tạo mới trận đấu thành công vào MongoDB!");
+      message.success("Đã tạo mới trận đấu thành công!");
       form.resetFields();
       setSelectedHomeTeam(null);
+      setRoundNamesList([]);
       onSuccess && onSuccess();
       onClose && onClose();
     } catch (err) {
@@ -65,8 +85,7 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
         layout="vertical"
         onFinish={handleSubmit}
         initialValues={{
-          round: 1,
-          status: "LIVE",
+          status: "NOT STARTED",
           homeScore: 0,
           awayScore: 0,
         }}
@@ -78,7 +97,14 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
           label="Giải đấu"
           rules={[{ required: true, message: "Vui lòng chọn giải đấu!" }]}
         >
-          <Select placeholder="Chọn giải đấu..." size="large">
+          <Select
+            placeholder="Chọn giải đấu..."
+            size="large"
+            onChange={async (val) => {
+              form.setFieldsValue({ roundName: undefined });
+              await handleTournamentChange(val);
+            }}
+          >
             {tournaments.map((t) => (
               <Option key={t._id} value={t._id}>
                 {t.name} ({t.season || "2026"})
@@ -150,35 +176,23 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
             </Select>
           </Form.Item>
 
-          <Form.Item noStyle dependencies={["tournamentId"]}>
-            {({ getFieldValue }) => {
-              const tId = getFieldValue("tournamentId");
-              const selectedT = tournaments.find((t) => t._id === tId);
-              const isCup = selectedT?.type === "CUP";
-              return (
-                <Form.Item
-                  name="round"
-                  label="Vòng đấu / Giai đoạn"
-                  rules={[{ required: true, message: "Vui lòng chọn hoặc nhập vòng đấu!" }]}
-                >
-                  {isCup ? (
-                    <Select placeholder="Chọn vòng đấu..." size="large">
-                      <Option value={1}>Vòng bảng - Lượt 1</Option>
-                      <Option value={2}>Vòng bảng - Lượt 2</Option>
-                      <Option value={3}>Vòng bảng - Lượt 3</Option>
-                      <Option value={4}>Vòng bảng - Lượt 4</Option>
-                      <Option value={5}>Vòng bảng - Lượt 5</Option>
-                      <Option value={6}>Bán kết - Lượt đi</Option>
-                      <Option value={7}>Bán kết - Lượt về</Option>
-                      <Option value={8}>Chung kết - Lượt đi</Option>
-                      <Option value={9}>Chung kết - Lượt về</Option>
-                    </Select>
-                  ) : (
-                    <InputNumber min={1} max={50} placeholder="Nhập số vòng..." className="w-full" size="large" />
-                  )}
-                </Form.Item>
-              );
-            }}
+          <Form.Item
+            name="roundName"
+            label="Vòng đấu / Giai đoạn"
+            rules={[{ required: true, message: "Vui lòng chọn vòng đấu!" }]}
+          >
+            <Select
+              placeholder={loadingRounds ? "Đang tải vòng đấu..." : "Chọn vòng đấu..."}
+              size="large"
+              loading={loadingRounds}
+              disabled={!roundNamesList.length}
+            >
+              {roundNamesList.map((rn) => (
+                <Option key={rn._id} value={rn._id}>
+                  {rn.roundName}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
         </div>
 
@@ -198,14 +212,22 @@ const CreateMatchModal = ({ visible, onClose, onSuccess, tournaments = [], teams
         </div>
 
         {/* Scores */}
-        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl mb-4 border border-slate-100">
-          <Form.Item name="homeScore" label="Bàn thắng Đội nhà" className="mb-0">
-            <InputNumber min={0} className="w-full" size="large" />
-          </Form.Item>
-          <Form.Item name="awayScore" label="Bàn thắng Đội khách" className="mb-0">
-            <InputNumber min={0} className="w-full" size="large" />
-          </Form.Item>
-        </div>
+        <Form.Item noStyle dependencies={["status"]}>
+          {({ getFieldValue }) => {
+            const status = getFieldValue("status");
+            if (status === "NOT STARTED") return null;
+            return (
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl mb-4 border border-slate-100">
+                <Form.Item name="homeScore" label="Bàn thắng Đội nhà" className="mb-0">
+                  <InputNumber min={0} className="w-full" size="large" />
+                </Form.Item>
+                <Form.Item name="awayScore" label="Bàn thắng Đội khách" className="mb-0">
+                  <InputNumber min={0} className="w-full" size="large" />
+                </Form.Item>
+              </div>
+            );
+          }}
+        </Form.Item>
 
         {/* Submit Buttons */}
         <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">

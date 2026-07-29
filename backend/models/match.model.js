@@ -2,7 +2,11 @@ import mongoose from "mongoose";
 
 const matchSchema = new mongoose.Schema({
     tournamentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tournament', required: true },
-    round: { type: Number, required: true },
+    roundName: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'RoundNameTournement',
+        required: true
+    },
 
     homeTeam: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', required: true },
     awayTeam: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', required: true },

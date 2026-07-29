@@ -121,7 +121,7 @@ const UserPredictView = ({
                   <div className="bg-slate-900 text-white p-4 flex flex-col gap-1.5 relative border-b border-slate-805">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-extrabold text-[9px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20 uppercase tracking-wider truncate max-w-[150px]">
-                        Vòng {match.round} • {tName}
+                        {(typeof match.roundName === "object" ? match.roundName?.roundName : match.roundName) || (match.round ? `Vòng ${match.round}` : "")} • {tName}
                       </span>
                       
                       {/* Status badge */}

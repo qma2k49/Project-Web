@@ -21,7 +21,7 @@ const predictionController = {
       if (x2Bonus && match) {
         const siblingMatches = await MatchModel.find({
           tournamentId: match.tournamentId,
-          round: match.round,
+          roundName: match.roundName,
           _id: { $ne: match._id }
         }).select('_id');
         
@@ -151,7 +151,8 @@ const predictionController = {
           populate: [
             { path: 'homeTeam', select: 'name shortName logo' },
             { path: 'awayTeam', select: 'name shortName logo' },
-            { path: 'tournamentId', select: 'name' }
+            { path: 'tournamentId', select: 'name' },
+            { path: 'roundName', select: 'roundName' }
           ]
         })
         .populate('firstScorePlayer', 'name jerseyNumber');

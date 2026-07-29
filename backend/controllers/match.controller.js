@@ -14,6 +14,7 @@ const matchController = {
         .populate('stadium')
         .populate('refereeId')
         .populate('tournamentId')
+        .populate('roundName')
         .sort({ createdAt: -1 });
 
       const liveMatchIds = matches.filter(m => m.status === 'LIVE').map(m => m._id);
@@ -66,7 +67,8 @@ const matchController = {
         .populate('awayTeam')
         .populate('stadium')
         .populate('refereeId')
-        .populate('tournamentId');
+        .populate('tournamentId')
+        .populate('roundName');
       if (!match) return res.status(404).json({ message: 'Không tìm thấy trận đấu' });
       
       const events = await MatchEventModel.find({ matchId: req.params.id })
@@ -117,7 +119,8 @@ const matchController = {
         .populate('homeTeam')
         .populate('awayTeam')
         .populate('stadium')
-        .populate('tournamentId');
+        .populate('tournamentId')
+        .populate('roundName');
       res.status(201).json(populated);
     } catch (error) {
       res.status(500).json({ message: 'Lỗi tạo lịch trận đấu', error: error.message });
