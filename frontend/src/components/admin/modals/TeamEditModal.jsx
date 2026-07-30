@@ -12,14 +12,15 @@ const TeamEditModal = ({
   uploadingImage,
   stadiums = [],
   coaches = [],
+  editingTeam = null,
 }) => {
   return (
     <Modal
-      title="Chỉnh sửa thông tin đội bóng"
+      title={editingTeam ? "Chỉnh sửa thông tin đội bóng" : "Thêm đội bóng mới"}
       open={visible}
       onCancel={onCancel}
       onOk={onOk}
-      okText="Lưu thay đổi"
+      okText={editingTeam ? "Lưu thay đổi" : "Thêm đội bóng"}
       cancelText="Hủy"
     >
       <Form layout="vertical" className="mt-3">

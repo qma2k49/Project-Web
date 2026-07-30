@@ -55,6 +55,20 @@ export const fetchTournaments = async () => {
   return res.data?.data || res.data;
 };
 
+export const createTournament = async (tournamentData, token) => {
+  const res = await api.post("/tournaments", tournamentData, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const updateTournament = async (id, tournamentData, token) => {
+  const res = await api.put(`/tournaments/${id}`, tournamentData, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
 export const fetchTeams = async () => {
   const res = await api.get("/teams");
   return res.data?.teams || res.data?.data || res.data;
@@ -62,6 +76,13 @@ export const fetchTeams = async () => {
 
 export const updateTeam = async (teamId, teamData) => {
   const res = await api.put(`/teams/${teamId}`, teamData);
+  return res.data;
+};
+
+export const createTeam = async (teamData, token) => {
+  const res = await api.post("/teams", teamData, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   return res.data;
 };
 

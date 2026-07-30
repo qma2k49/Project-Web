@@ -7,13 +7,14 @@ import RecentActivity from "../components/dashboard/RecentActivity";
 import CreateMatchModal from "../components/admin/modals/CreateMatchModal";
 import LiveControlDrawer from "../components/admin/modals/LiveControlDrawer";
 import ExportStatsModal from "../components/admin/modals/ExportStatsModal";
-import { fetchDashboardOverview, fetchPersons, updateTeam, createStadium, updateStadium, createPerson, updatePerson } from "../api";
+import { fetchDashboardOverview, fetchPersons, updateTeam, createTeam, createStadium, updateStadium, createPerson, updatePerson, createTournament, updateTournament } from "../api";
 import { Download, Plus, Trophy, Tv, Users, Cloud, RefreshCw, Search, Pencil, Upload } from "lucide-react";
 import { Modal, message, Input } from "antd";
 import { LeaguesView, TeamsView, StadiumsView, PersonnelView, LiveControlView, PageHeader, PredictionsView } from "../components/admin";
 import TeamEditModal from "../components/admin/modals/TeamEditModal";
 import StadiumModal from "../components/admin/modals/StadiumModal";
 import PersonModal from "../components/admin/modals/PersonModal";
+import TournamentModal from "../components/admin/modals/TournamentModal";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -37,6 +38,17 @@ const AdminPage = () => {
   const [editingTeam, setEditingTeam] = useState(null);
   const [isStadiumModalOpen, setIsStadiumModalOpen] = useState(false);
   const [editingStadium, setEditingStadium] = useState(null);
+  const [isTournamentModalOpen, setIsTournamentModalOpen] = useState(false);
+  const [editingTournament, setEditingTournament] = useState(null);
+  const [tournamentForm, setTournamentForm] = useState({
+    name: "",
+    season: "2026",
+    type: "LEAGUE",
+    startDate: "",
+    endDate: "",
+    groupA: [],
+    groupB: [],
+  });
   const [stadiumForm, setStadiumForm] = useState({
     name: "",
     capacity: "",
@@ -102,7 +114,7 @@ const AdminPage = () => {
     setIsLiveControlOpen(true);
   };
 
-  const openEditTeamModal = async (team) => {
+  const openTeamModal = async (team = null) => {
     const latestData = await loadDataFromDB();
     const coaches = latestData.coaches || [];
     const selectedCoachId = typeof team?.coach === "object"
@@ -116,7 +128,7 @@ const AdminPage = () => {
       city: team?.city || "",
       country: team?.country || "",
       homeStadium: team?.homeStadium || team?.stadium?.name || "",
-      coach: selectedCoachId,
+      coach: selectedCoachId || "",
       coachName: team?.coachName || "",
       logo: team?.logo || "",
     });
@@ -124,8 +136,6 @@ const AdminPage = () => {
   };
 
   const handleEditTeamSubmit = async () => {
-    if (!editingTeam) return;
-
     try {
       const payload = {
         ...editTeamForm,
@@ -138,20 +148,18 @@ const AdminPage = () => {
         delete payload.image;
       }
 
-      const response = await updateTeam(editingTeam._id, payload);
-      message.success("Cập nhật thông tin đội bóng thành công!");
-      setData((prev) => ({
-        ...prev,
-        teams: prev.teams.map((team) => (team._id === editingTeam._id ? { ...team, ...response.team } : team)),
-      }));
+      const token = localStorage.getItem("token") || "";
+      const response = editingTeam && editingTeam._id
+        ? await updateTeam(editingTeam._id, payload)
+        : await createTeam(payload, token);
 
-      if (response?.team?.logo) {
-        setEditTeamForm((prev) => ({ ...prev, logo: response.team.logo }));
-      }
+      message.success(editingTeam && editingTeam._id ? "Cập nhật thông tin đội bóng thành công!" : "Thêm đội bóng mới thành công!");
+      await loadDataFromDB();
+
       setIsEditTeamModalOpen(false);
       setEditingTeam(null);
     } catch (error) {
-      message.error(error?.response?.data?.message || "Không thể cập nhật đội bóng");
+      message.error(error?.response?.data?.message || "Không thể lưu thông tin đội bóng");
     }
   };
 
@@ -214,6 +222,65 @@ const AdminPage = () => {
     }
   };
 
+  const openTournamentModal = (tournament = null) => {
+    setEditingTournament(tournament);
+
+    let groupATeams = [];
+    let groupBTeams = [];
+    if (tournament && tournament.type === "CUP" && Array.isArray(tournament.groups)) {
+      const groupA = tournament.groups.find(g => g.name === "Bảng A");
+      const groupB = tournament.groups.find(g => g.name === "Bảng B");
+      if (groupA && Array.isArray(groupA.teams)) {
+        groupATeams = groupA.teams.map(t => typeof t === "object" ? t._id || t.id : t);
+      }
+      if (groupB && Array.isArray(groupB.teams)) {
+        groupBTeams = groupB.teams.map(t => typeof t === "object" ? t._id || t.id : t);
+      }
+    }
+
+    setTournamentForm({
+      name: tournament?.name || "",
+      season: tournament?.season || "2026",
+      type: tournament?.type || "LEAGUE",
+      startDate: tournament?.startDate ? new Date(tournament.startDate).toISOString().split("T")[0] : "",
+      endDate: tournament?.endDate ? new Date(tournament.endDate).toISOString().split("T")[0] : "",
+      groupA: groupATeams,
+      groupB: groupBTeams,
+    });
+    setIsTournamentModalOpen(true);
+  };
+
+  const handleTournamentSubmit = async () => {
+    try {
+      const payload = {
+        name: tournamentForm.name,
+        season: tournamentForm.season,
+        type: tournamentForm.type,
+        startDate: tournamentForm.startDate ? new Date(tournamentForm.startDate) : null,
+        endDate: tournamentForm.endDate ? new Date(tournamentForm.endDate) : null,
+      };
+
+      if (tournamentForm.type === "CUP") {
+        payload.groups = [
+          { name: "Bảng A", teams: tournamentForm.groupA || [] },
+          { name: "Bảng B", teams: tournamentForm.groupB || [] },
+        ];
+      }
+
+      const token = localStorage.getItem("token") || "";
+      const response = editingTournament
+        ? await updateTournament(editingTournament._id, payload, token)
+        : await createTournament(payload, token);
+
+      message.success(editingTournament ? "Cập nhật giải đấu thành công!" : "Tạo giải đấu mới thành công!");
+      await loadDataFromDB();
+      setIsTournamentModalOpen(false);
+      setEditingTournament(null);
+    } catch (error) {
+      message.error(error?.response?.data?.message || "Không thể lưu giải đấu");
+    }
+  };
+
   const handleStadiumImageUpload = async (file) => {
     const formData = new FormData();
     formData.append("image", file);
@@ -260,7 +327,7 @@ const AdminPage = () => {
         jerseyNumber: personForm.jerseyNumber ? Number(personForm.jerseyNumber) : undefined,
       };
 
-      const response = editingPerson
+      const response = editingPerson && editingPerson._id
         ? await updatePerson(editingPerson._id, payload)
         : await createPerson(payload);
 
@@ -375,8 +442,23 @@ const AdminPage = () => {
             stadiums={data.stadiums}
             players={data.players}
             onBack={() => setActiveTab("dashboard")}
+            onAddTournament={() => openTournamentModal(null)}
+            onEditTournament={openTournamentModal}
           />
         </div>
+
+        <TournamentModal
+          visible={isTournamentModalOpen}
+          onCancel={() => {
+            setIsTournamentModalOpen(false);
+            setEditingTournament(null);
+          }}
+          onOk={handleTournamentSubmit}
+          form={tournamentForm}
+          onFieldChange={(field, value) => setTournamentForm((prev) => ({ ...prev, [field]: value }))}
+          teams={data.teams}
+          editingTournament={editingTournament}
+        />
       </div>
     );
   }
@@ -492,12 +574,21 @@ const AdminPage = () => {
               title="Tìm kiếm thông tin đội bóng"
               description="Nhập tên đội, tên viết tắt, thành phố hoặc sân nhà để tra cứu thông tin nhanh."
               action={
-                <button
-                  onClick={() => setActiveTab("dashboard")}
-                  className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
-                >
-                  Quay lại tổng quan
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => openTeamModal(null)}
+                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Thêm đội bóng
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("dashboard")}
+                    className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
+                  >
+                    Quay lại tổng quan
+                  </button>
+                </div>
               }
             />
 
@@ -538,7 +629,7 @@ const AdminPage = () => {
                     </div>
                   </div>
                   <button
-                    onClick={() => openEditTeamModal(selectedTeam)}
+                    onClick={() => openTeamModal(selectedTeam)}
                     className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
                   >
                     <Pencil className="w-4 h-4" />
@@ -587,6 +678,7 @@ const AdminPage = () => {
           uploadingImage={uploadingImage}
           stadiums={data.stadiums}
           coaches={data.coaches}
+          editingTeam={editingTeam}
         />
       </div>
     );

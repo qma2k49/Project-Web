@@ -1,21 +1,30 @@
 import React from "react";
 import { Input } from "antd";
-import { Search, Pencil, Upload } from "lucide-react";
+import { Search, Pencil, Upload, Plus } from "lucide-react";
 import PageHeader from "./PageHeader";
 
-const TeamsView = ({ loading, searchTerm, onSearchChange, filteredTeams, selectedTeam, onEditTeam, onBack, data, onOpenEditTeamModal }) => {
+const TeamsView = ({ loading, searchTerm, onSearchChange, filteredTeams, selectedTeam, onEditTeam, onBack, data, onOpenEditTeamModal, onAddTeam }) => {
   return (
     <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-6">
       <PageHeader
         title="Tìm kiếm thông tin đội bóng"
         description="Nhập tên đội, tên viết tắt, thành phố hoặc sân nhà để tra cứu thông tin nhanh."
         action={
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
-          >
-            Quay lại tổng quan
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onAddTeam}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Thêm đội bóng
+            </button>
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
+            >
+              Quay lại tổng quan
+            </button>
+          </div>
         }
       />
 

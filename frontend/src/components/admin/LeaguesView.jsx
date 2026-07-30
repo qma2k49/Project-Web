@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "./PageHeader";
 import { fetchTeamStandings } from "../../api";
-import { Trophy, Calendar, Users, ArrowLeft, Shield, AlertCircle, Sparkles } from "lucide-react";
+import { Trophy, Calendar, Users, ArrowLeft, Shield, AlertCircle, Sparkles, Pencil } from "lucide-react";
 import { Spin } from "antd";
 import MatchLineupModal from "./modals/MatchLineupModal";
 import LiveClock from "./LiveClock";
 
-const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players = [], onBack, isAdmin = true }) => {
+const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players = [], onBack, isAdmin = true, onAddTournament, onEditTournament }) => {
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [standings, setStandings] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(false);
@@ -719,6 +719,24 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
       <PageHeader
         title="Danh sách giải đấu"
         description="Quản lý các giải đấu đang hoạt động và theo dõi thông tin chi tiết từng giải."
+        action={
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <button
+                onClick={onAddTournament}
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl border border-emerald-600 text-xs shadow-xs transition-colors cursor-pointer"
+              >
+                Thêm giải đấu
+              </button>
+            )}
+            <button
+              onClick={onBack}
+              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors cursor-pointer"
+            >
+              Quay lại
+            </button>
+          </div>
+        }
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -746,13 +764,24 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
                   </h2>
                   <p className="text-xs text-slate-400 font-medium mt-0.5">Mùa giải {tournament.season || "2026"}</p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase border ${tournament.status === "COMPLETED" ? "bg-blue-50 text-blue-700 border-blue-100" :
-                  tournament.status === "ONGOING" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                    "bg-amber-50 text-amber-700 border-amber-100"
-                  }`}>
-                  {tournament.status === "COMPLETED" ? "Kết thúc" :
-                    tournament.status === "ONGOING" ? "Đang diễn ra" : "Chưa bắt đầu"}
-                </span>
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  {isAdmin && (
+                    <button
+                      onClick={() => onEditTournament(tournament)}
+                      className="p-2 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-705 text-slate-500 hover:text-emerald-700 border border-slate-200 hover:border-emerald-200 rounded-xl transition-all"
+                      title="Chỉnh sửa giải đấu"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <span className={`rounded-full px-3 py-1 text-[10px] font-extrabold uppercase border ${tournament.status === "COMPLETED" ? "bg-blue-50 text-blue-700 border-blue-100" :
+                    tournament.status === "ONGOING" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                      "bg-amber-50 text-amber-700 border-amber-100"
+                    }`}>
+                    {tournament.status === "COMPLETED" ? "Kết thúc" :
+                      tournament.status === "ONGOING" ? "Đang diễn ra" : "Chưa bắt đầu"}
+                  </span>
+                </div>
               </div>
 
               <div className="mt-5 text-sm text-slate-600 space-y-2 border-t border-slate-50 pt-4">
