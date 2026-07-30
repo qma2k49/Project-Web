@@ -622,6 +622,27 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
                     const maxMatches = Math.pow(2, knockoutStagesList.length - 1);
                     const totalHeight = Math.max(560, maxMatches * 200);
 
+                    // Helper to check if a match belongs to a stage (relational or name fallback)
+                    const isMatchInStage = (m, stageObj) => {
+                      if (!m || !stageObj) return false;
+                      const mTourId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
+                      if (String(mTourId) !== String(selectedTournament._id)) return false;
+
+                      // 1. Relational match via ObjectId reference
+                      const mStageId = m.roundName?.knockoutStageId || m.roundName;
+                      const targetStageId = typeof mStageId === "object" ? mStageId?._id || mStageId?.knockoutStageId : mStageId;
+                      if (targetStageId && String(targetStageId) === String(stageObj._id)) {
+                        return true;
+                      }
+
+                      // 2. Text name matching fallback ("Bán kết - Lượt đi" starts with "Bán kết")
+                      const rName = typeof m.roundName === "object" ? m.roundName?.roundName : m.roundName;
+                      if (rName && stageObj.name) {
+                        return rName.toLowerCase().startsWith(stageObj.name.toLowerCase());
+                      }
+                      return false;
+                    };
+
                     // Helper to check if a matchup has finished
                     const isMatchupFinished = (m) => {
                       if (!m) return false;
@@ -633,12 +654,7 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
                     const isFeederFinished = (stageIdx, matchIdx) => {
                       if (stageIdx <= 0) return false;
                       const prevStage = knockoutStagesList[stageIdx - 1];
-                      const prevMatches = matches.filter((m) => {
-                        const mTourId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
-                        const mStageId = m.roundName?.knockoutStageId || m.roundName;
-                        const targetStageId = typeof mStageId === "object" ? mStageId?._id || mStageId?.knockoutStageId : mStageId;
-                        return mTourId === selectedTournament._id && String(targetStageId) === String(prevStage._id);
-                      });
+                      const prevMatches = matches.filter((m) => isMatchInStage(m, prevStage));
                       const prevPairs = getPairsForStage(prevMatches);
                       const feed1 = prevPairs[2 * matchIdx];
                       const feed2 = prevPairs[2 * matchIdx + 1];
@@ -648,12 +664,7 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
                     return (
                       <div className="flex flex-row overflow-x-auto gap-12 pt-4 pb-4 scrollbar-thin scrollbar-thumb-slate-200 items-stretch w-full" style={{ minHeight: `${totalHeight + 100}px` }}>
                         {knockoutStagesList.map((stage, sIdx) => {
-                          const stageMatches = matches.filter((m) => {
-                            const mTourId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
-                            const mStageId = m.roundName?.knockoutStageId || m.roundName;
-                            const targetStageId = typeof mStageId === "object" ? mStageId?._id || mStageId?.knockoutStageId : mStageId;
-                            return mTourId === selectedTournament._id && String(targetStageId) === String(stage._id);
-                          });
+                          const stageMatches = matches.filter((m) => isMatchInStage(m, stage));
 
                           const pairs = getPairsForStage(stageMatches);
                           const isLastStage = sIdx === knockoutStagesList.length - 1;
