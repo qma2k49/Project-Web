@@ -78,7 +78,7 @@ app.post('/api/teams/upload-image', upload.single('image'), (req, res) => {
     return res.status(400).json({ message: 'Không có ảnh được tải lên' });
   }
 
-  const imageUrl = `http://localhost:${process.env.PORT || 3000}/uploads/teams/${req.file.filename}`;
+  const imageUrl = `${req.protocol}://${req.get('host')}/uploads/teams/${req.file.filename}`;
   res.status(200).json({ imageUrl });
 });
 
