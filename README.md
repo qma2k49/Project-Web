@@ -99,20 +99,9 @@ Project-Web/
 ## 🧪 Tài Khoản Thử Nghiệm
 
 * **Tài khoản Admin:**
-  - Email: `admin@gmail.com`
-  - Mật khẩu: `admin123`
+  - Tên đăng nhập: `admin_asean`
+  - Mật khẩu: `hashed_password_123_abc`
 * **Tài khoản Người Dùng (User):**
-  - Email: `user@gmail.com`
-  - Mật khẩu: `user123`
+  - Tên đăng nhập: `fan_vietnam_01`
+  - Mật khẩu: `hashed_password_456_def`
 
----
-
-## 🛠️ Biên Dịch Cho Môi Trường Production
-
-Để biên dịch ứng dụng Frontend sang mã tối ưu hóa chạy trên môi trường thực tế (Production):
-1. Di chuyển vào thư mục `frontend`.
-2. Chạy lệnh build:
-   ```bash
-   npm run build
-   ```
-3. Mã nguồn đã tối ưu sẽ nằm trong thư mục `/dist` sẵn sàng để deploy lên Vercel, Netlify, hoặc Host VPS.
