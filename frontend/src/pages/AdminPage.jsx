@@ -600,7 +600,7 @@ const AdminPage = () => {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
-        <AdminHeader title="Bảng quản trị (Ant Design Popup Modals)" />
+        <AdminHeader title={`Chào mừng đến với trang quản trị`} />
 
         {/* Main Content Area */}
         <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-8">

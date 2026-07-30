@@ -131,7 +131,15 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
     return username.toLowerCase().includes(userSearchTerm.toLowerCase());
   });
 
-  const filteredPredictions = predictions.filter(pred => {
+  const tournamentPredictions = predictions.filter(pred => {
+    if (!selectedTournamentId) return true;
+    const match = pred.matchId;
+    if (!match) return false;
+    const mTourId = typeof match.tournamentId === "object" ? match.tournamentId?._id : match.tournamentId;
+    return String(mTourId) === String(selectedTournamentId);
+  });
+
+  const filteredPredictions = tournamentPredictions.filter(pred => {
     const username = pred.userId?.userName || "";
     const homeTeam = pred.matchId?.homeTeam?.name || "";
     const awayTeam = pred.matchId?.awayTeam?.name || "";
@@ -144,9 +152,8 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
 
   // Stats calculation
   const totalSubmissions = filteredPredictions.length;
-  const totalUniqueUsers = new Set(predictions.map(p => p.userId?._id || p.userId?.id)).size;
-  const x2BoostCount = predictions.filter(p => p.x2Bonus).length;
-  const totalPointsAwarded = leaderboard.reduce((sum, item) => sum + (item.totalPoints || 0), 0);
+  const totalUniqueUsers = new Set(tournamentPredictions.map(p => p.userId?._id || p.userId?.id)).size;
+  const x2BoostCount = tournamentPredictions.filter(p => p.x2Bonus).length;
 
   // Leaderboard columns
   const leaderboardColumns = [
@@ -220,80 +227,34 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
       render: (text) => <span className="font-extrabold text-slate-800 text-xs">{text || "Thành viên"}</span>
     },
     {
-      title: "Trận đấu",
-      key: "matchup",
-      width: 280,
-      render: (_, record) => {
-        const match = record.matchId;
-        if (!match) return <span className="text-slate-400 text-xs">Trận đấu không tồn tại</span>;
-        
-        return (
-          <div className="flex items-center gap-2 text-xs">
-            {/* Home */}
-            <div className="flex items-center gap-1 w-[100px] justify-end">
-              <span className="font-bold text-slate-800 truncate" title={match.homeTeam?.name}>
-                {match.homeTeam?.shortName || match.homeTeam?.name}
-              </span>
-              {match.homeTeam?.logo ? (
-                <img src={match.homeTeam.logo} alt="" className="w-5 h-5 rounded-full object-cover bg-white border border-slate-100" />
-              ) : (
-                <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[8px] font-bold">?</div>
-              )}
-            </div>
-
-            <div className="px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-mono font-bold text-slate-500">
-              VS
-            </div>
-
-            {/* Away */}
-            <div className="flex items-center gap-1 w-[100px]">
-              {match.awayTeam?.logo ? (
-                <img src={match.awayTeam.logo} alt="" className="w-5 h-5 rounded-full object-cover bg-white border border-slate-100" />
-              ) : (
-                <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[8px] font-bold">?</div>
-              )}
-              <span className="font-bold text-slate-800 truncate" title={match.awayTeam?.name}>
-                {match.awayTeam?.shortName || match.awayTeam?.name}
-              </span>
-            </div>
-          </div>
-        );
-      }
-    },
-    {
-      title: "Dự đoán Tỷ số",
-      key: "predictedScore",
+      title: "Dự đoán tỷ số",
+      key: "predictScore",
       align: "center",
       render: (_, record) => (
         <div className="flex items-center justify-center gap-1">
-          <span className="font-mono font-black text-slate-800 text-sm">
+          <span className="font-mono font-black text-slate-800 text-xs bg-slate-100 px-2 py-0.5 rounded">
             {record.predictedHomeScore} - {record.predictedAwayScore}
           </span>
           {record.x2Bonus && (
-            <Tooltip title="Sử dụng boost x2 điểm">
-              <span className="text-[8px] font-black bg-amber-400 text-amber-950 px-1 py-0.2 rounded border border-amber-305">X2</span>
-            </Tooltip>
+            <span className="text-[7.5px] font-black bg-amber-400 text-amber-950 px-1 py-0.2 rounded border border-amber-300">X2</span>
           )}
         </div>
       )
     },
     {
       title: "Cầu thủ ghi bàn đầu",
-      dataIndex: ["firstScorePlayer", "name"],
-      key: "scorer",
-      render: (name, record) => {
-        if (!name) return <span className="text-slate-400 text-[10.5px]">Không chọn</span>;
-        const jNumber = record.firstScorePlayer?.jerseyNumber;
-        return (
-          <span className="font-bold text-slate-700 text-xs">
-            ⚽ {jNumber !== undefined ? `#${jNumber} ` : ""}{name}
-          </span>
-        );
+      dataIndex: "firstScorePlayer",
+      key: "firstScorePlayer",
+      render: (playerId) => {
+        if (!playerId) return <span className="text-slate-400 text-xs">-</span>;
+        // In real app, you can pass person objects array to map ID to Name. 
+        // For simplicity, just display placeholder or it will be populated if returned by API.
+        return <span className="text-slate-600 font-bold text-xs">⚽ Chọn cầu thủ</span>;
       }
     },
     {
-      title: "Tỉ số thực",
-      key: "realScore",
+      title: "Kết quả thực tế",
+      key: "actualScore",
       align: "center",
       render: (_, record) => {
         const match = record.matchId;
@@ -369,7 +330,7 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
       </div>
 
       {/* Grid statistics cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white border border-slate-205 rounded-2xl p-5 shadow-2xs">
           <div className="flex justify-between items-start">
             <div className="space-y-1">
@@ -402,18 +363,6 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
             </div>
             <div className="p-2.5 bg-amber-50 rounded-xl">
               <Sparkles className="w-5 h-5 text-amber-505" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-205 rounded-2xl p-5 shadow-2xs">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Tổng điểm đã trao</span>
-              <h3 className="text-2xl font-black text-slate-800">{totalPointsAwarded}đ</h3>
-            </div>
-            <div className="p-2.5 bg-purple-50 rounded-xl">
-              <Coins className="w-5 h-5 text-purple-650" />
             </div>
           </div>
         </div>
