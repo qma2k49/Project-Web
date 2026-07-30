@@ -9,14 +9,6 @@ const PersonnelView = ({ loading, playerSearchTerm, coachSearchTerm, onPlayerSea
       <PageHeader
         title="Cầu thủ & Huấn luyện viên"
         description="Tra cứu và quản lý cầu thủ và HLV bằng hai bộ tìm kiếm riêng biệt."
-        action={
-          <button
-            onClick={() => window.history.back()}
-            className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
-          >
-            Quay lại tổng quan
-          </button>
-        }
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

@@ -12,9 +12,8 @@ const StadiumsView = ({ loading, stadiumSearchTerm, onStadiumSearchChange, filte
         action={
           <button
             onClick={onAddStadium}
-            className="inline-flex items-center gap-2 bg-[#0d1726] hover:bg-slate-800 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-colors"
+            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-colors cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
             Thêm sân vận động
           </button>
         }

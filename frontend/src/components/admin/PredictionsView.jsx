@@ -22,7 +22,7 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
   const [loading, setLoading] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState("leaderboard"); // leaderboard, list
   const [selectedTournamentId, setSelectedTournamentId] = useState(null);
-  
+
   // Search states
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [matchSearchTerm, setMatchSearchTerm] = useState("");
@@ -53,11 +53,11 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
       if (selectedTournamentId) {
         promises.push(fetchPredictionLeaderboard(selectedTournamentId));
       }
-      
+
       const results = await Promise.all(promises);
       const allPreds = results[0];
       setPredictions(Array.isArray(allPreds) ? allPreds : []);
-      
+
       if (selectedTournamentId && results[1]) {
         setLeaderboard(Array.isArray(results[1]) ? results[1] : []);
       } else {
@@ -145,9 +145,9 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
     const awayTeam = pred.matchId?.awayTeam?.name || "";
 
     const keyword = matchSearchTerm.toLowerCase();
-    return username.toLowerCase().includes(keyword) || 
-           homeTeam.toLowerCase().includes(keyword) || 
-           awayTeam.toLowerCase().includes(keyword);
+    return username.toLowerCase().includes(keyword) ||
+      homeTeam.toLowerCase().includes(keyword) ||
+      awayTeam.toLowerCase().includes(keyword);
   });
 
   // Stats calculation
@@ -279,9 +279,8 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
           return <span className="text-slate-400 font-semibold text-xs">⏳ Đang chờ</span>;
         }
         return (
-          <span className={`font-mono font-black text-xs px-2 py-0.5 rounded ${
-            pts > 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-400"
-          }`}>
+          <span className={`font-mono font-black text-xs px-2 py-0.5 rounded ${pts > 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-400"
+            }`}>
             +{pts || 0}đ
           </span>
         );
@@ -299,7 +298,7 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
             Bảng Điều khiển Quản lý Nhận định
           </h2>
           <p className="text-xs text-slate-450 font-medium mt-1">
-            Theo dõi danh sách dự đoán tỷ số của người dùng, xếp hạng điểm tích lũy và cập nhật thủ công nếu cần thiết.
+            Theo dõi danh sách dự đoán tỷ số của người dùng, xếp hạng điểm tích lũy.
           </p>
         </div>
 
@@ -321,7 +320,7 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
           <button
             onClick={handleRecalculate}
             disabled={recalculating}
-            className="inline-flex items-center gap-2 bg-[#0c1726] hover:bg-slate-800 disabled:bg-slate-400 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${recalculating ? "animate-spin" : ""}`} />
             Tính lại điểm số
@@ -375,21 +374,19 @@ const PredictionsView = ({ tournaments = [], loadingOverview = false }) => {
           <div className="flex gap-2">
             <button
               onClick={() => setActiveSubTab("leaderboard")}
-              className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
-                activeSubTab === "leaderboard"
-                  ? "bg-emerald-500 text-white shadow-2xs"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-              }`}
+              className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${activeSubTab === "leaderboard"
+                ? "bg-emerald-500 text-white shadow-2xs"
+                : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                }`}
             >
               🏆 Bảng xếp hạng dự đoán
             </button>
             <button
               onClick={() => setActiveSubTab("list")}
-              className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${
-                activeSubTab === "list"
-                  ? "bg-emerald-500 text-white shadow-2xs"
-                  : "bg-slate-50 text-slate-600 hover:bg-slate-100"
-              }`}
+              className={`px-4 py-2 text-xs font-black rounded-xl transition-all cursor-pointer ${activeSubTab === "list"
+                ? "bg-emerald-500 text-white shadow-2xs"
+                : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+                }`}
             >
               📋 Danh sách dự đoán chi tiết
             </button>

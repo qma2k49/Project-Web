@@ -36,14 +36,6 @@ const LiveControlView = ({ loading = false, matches = [], players = [], onOpenLi
       <PageHeader
         title="Điều khiển trực tiếp"
         description="Theo dõi, mở bảng điều khiển và ghi nhận sự kiện cho các trận đang diễn ra."
-        action={
-          <button
-            onClick={onBack}
-            className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors"
-          >
-            Quay lại tổng quan
-          </button>
-        }
       />
 
       <div className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-slate-50 p-6 shadow-sm">
@@ -120,12 +112,12 @@ const LiveControlView = ({ loading = false, matches = [], players = [], onOpenLi
               const venueName = match.stadium?.name || match.stadiumName || match.venue || "Chưa cập nhật địa điểm";
               const formattedMatchDate = matchDate
                 ? new Date(matchDate).toLocaleString("vi-VN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })
                 : "Chưa có thời gian";
 
               return (

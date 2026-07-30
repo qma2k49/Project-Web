@@ -6,7 +6,7 @@ import { Spin } from "antd";
 import MatchLineupModal from "./modals/MatchLineupModal";
 import LiveClock from "./LiveClock";
 
-const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players = [], onBack, isAdmin = true, onAddTournament, onEditTournament }) => {
+const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players = [], isAdmin = true, onAddTournament, onEditTournament }) => {
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [standings, setStandings] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(false);
@@ -729,12 +729,6 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
                 Thêm giải đấu
               </button>
             )}
-            <button
-              onClick={onBack}
-              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-xs shadow-xs transition-colors cursor-pointer"
-            >
-              Quay lại
-            </button>
           </div>
         }
       />
