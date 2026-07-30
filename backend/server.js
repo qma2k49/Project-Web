@@ -21,6 +21,7 @@ import playerStandingRouter from './routes/playerStanding.route.js';
 import matchEventRouter from './routes/matchEvent.route.js';
 import matchLineupRouter from './routes/matchLineup.route.js';
 import roundNameTournementRouter from './routes/roundNameTournement.route.js';
+import knockoutStageRouter from './routes/knockoutStage.route.js';
 
 dotenv.config();
 
@@ -93,6 +94,7 @@ app.use('/api/team-standings', teamStandingRouter);
 app.use('/api/player-standings', playerStandingRouter);
 app.use('/api/match-events', matchEventRouter);
 app.use('/api/match-lineups', matchLineupRouter);
+app.use('/api/knockout-stages', knockoutStageRouter);
 app.use('/api/round-names-tournament', roundNameTournementRouter);
 
 // Socket.io Real-time Event Handlers

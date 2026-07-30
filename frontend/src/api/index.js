@@ -69,6 +69,18 @@ export const updateTournament = async (id, tournamentData, token) => {
   return res.data;
 };
 
+export const fetchKnockoutStages = async (tournamentId) => {
+  const res = await api.get(`/knockout-stages/tournament/${tournamentId}`);
+  return res.data;
+};
+
+export const syncKnockoutStages = async (tournamentId, stages, token) => {
+  const res = await api.put(`/knockout-stages/tournament/${tournamentId}`, { stages }, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
 export const fetchTeams = async () => {
   const res = await api.get("/teams");
   return res.data?.teams || res.data?.data || res.data;

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "./PageHeader";
-import { fetchTeamStandings } from "../../api";
+import { fetchTeamStandings, fetchKnockoutStages } from "../../api";
 import { Trophy, Calendar, Users, ArrowLeft, Shield, AlertCircle, Sparkles, Pencil } from "lucide-react";
 import { Spin } from "antd";
 import MatchLineupModal from "./modals/MatchLineupModal";
 import LiveClock from "./LiveClock";
 
-const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players = [], isAdmin = true, onAddTournament, onEditTournament }) => {
+const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players = [], isAdmin = true, onAddTournament, onEditTournament, onConfigureKnockoutStages }) => {
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [standings, setStandings] = useState([]);
   const [loadingStandings, setLoadingStandings] = useState(false);
@@ -14,6 +14,8 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
 
   const [selectedLineupMatch, setSelectedLineupMatch] = useState(null);
   const [isLineupModalOpen, setIsLineupModalOpen] = useState(false);
+  const [knockoutStagesList, setKnockoutStagesList] = useState([]);
+  const [loadingStages, setLoadingStages] = useState(false);
 
   const handleOpenLineupModal = (match) => {
     setSelectedLineupMatch(match);
@@ -41,6 +43,26 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
       }
     };
     loadStandings();
+  }, [selectedTournament]);
+
+  // Load knockout stages when a tournament is selected
+  useEffect(() => {
+    if (selectedTournament && selectedTournament.type === "CUP") {
+      const loadStages = async () => {
+        try {
+          setLoadingStages(true);
+          const stages = await fetchKnockoutStages(selectedTournament._id);
+          setKnockoutStagesList(Array.isArray(stages) ? stages : []);
+        } catch (error) {
+          console.error("Lỗi lấy danh sách knockout stages:", error);
+        } finally {
+          setLoadingStages(false);
+        }
+      };
+      loadStages();
+    } else {
+      setKnockoutStagesList([]);
+    }
   }, [selectedTournament]);
 
   // Fallback / dynamic calculation of standings from matches
@@ -285,129 +307,40 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
     );
   };
 
-  // If a specific tournament is selected, render its detail view
-  if (selectedTournament) {
-    const isCup = selectedTournament.type === "CUP";
-    const knockoutMatches = matches.filter((m) => {
-      const tId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
-      return tId === selectedTournament._id && m.round >= 6 && m.round <= 9;
-    });
-
-    // Group A and B top teams from standings
-    const groupA = selectedTournament.groups?.[0];
-    const groupB = selectedTournament.groups?.[1];
-
-    const groupAStandings = groupA ? getStandingsForGroup(groupA.name, groupA.teams) : [];
-    const groupBStandings = groupB ? getStandingsForGroup(groupB.name, groupB.teams) : [];
-
-    const t1A = groupAStandings[0]?.teamObj;
-    const t2A = groupAStandings[1]?.teamObj;
-    const t1B = groupBStandings[0]?.teamObj;
-    const t2B = groupBStandings[1]?.teamObj;
-
-    // Check if group stage is completed (all group matches are FINISHED, round <= 5)
-    const groupMatches = matches.filter((m) => {
-      const tId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
-      return tId === selectedTournament._id && m.round <= 5;
-    });
-    const isGroupStageFinished = groupMatches.length > 0 && groupMatches.every((m) => m.status === "FINISHED");
-
-    // Semi-finals mappings (Round 6 and 7 matches)
-    const sfMatches = knockoutMatches.filter((m) => m.round === 6 || m.round === 7);
-    const sfPairsMap = {};
-    sfMatches.forEach((m) => {
+  const getPairsForStage = (stageMatches) => {
+    const pairsMap = {};
+    stageMatches.forEach((m) => {
       const homeId = typeof m.homeTeam === "object" ? m.homeTeam?._id : m.homeTeam;
       const awayId = typeof m.awayTeam === "object" ? m.awayTeam?._id : m.awayTeam;
       if (!homeId || !awayId) return;
       const key = [homeId, awayId].sort().join("-");
-      if (!sfPairsMap[key]) {
-        sfPairsMap[key] = {
+      if (!pairsMap[key]) {
+        pairsMap[key] = {
           teamA: m.homeTeam,
           teamB: m.awayTeam,
           leg1: null,
           leg2: null,
         };
       }
-      if (m.round === 6) sfPairsMap[key].leg1 = m;
-      if (m.round === 7) sfPairsMap[key].leg2 = m;
-    });
-    const sfPairs = Object.values(sfPairsMap);
-
-    let sf1 = {
-      title: "Bán kết 1",
-      placeholderA: "Nhất Bảng A",
-      placeholderB: "Nhì Bảng B",
-      projectedA: isGroupStageFinished ? t1A : null,
-      projectedB: isGroupStageFinished ? t2B : null,
-      teamA: null,
-      teamB: null,
-      leg1: null,
-      leg2: null,
-    };
-
-    let sf2 = {
-      title: "Bán kết 2",
-      placeholderA: "Nhất Bảng B",
-      placeholderB: "Nhì Bảng A",
-      projectedA: isGroupStageFinished ? t1B : null,
-      projectedB: isGroupStageFinished ? t2A : null,
-      teamA: null,
-      teamB: null,
-      leg1: null,
-      leg2: null,
-    };
-
-    sfPairs.forEach((pair) => {
-      const idA = typeof pair.teamA === "object" ? pair.teamA?._id : pair.teamA;
-      const idB = typeof pair.teamB === "object" ? pair.teamB?._id : pair.teamB;
-
-      const isSF1 = (t1A && (idA === t1A._id || idB === t1A._id)) || (t2B && (idA === t2B._id || idB === t2B._id));
-      const isSF2 = (t1B && (idA === t1B._id || idB === t1B._id)) || (t2A && (idA === t2A._id || idB === t2A._id));
-
-      if (isSF1) {
-        sf1.teamA = pair.teamA;
-        sf1.teamB = pair.teamB;
-        sf1.leg1 = pair.leg1;
-        sf1.leg2 = pair.leg2;
-      } else if (isSF2) {
-        sf2.teamA = pair.teamA;
-        sf2.teamB = pair.teamB;
-        sf2.leg1 = pair.leg1;
-        sf2.leg2 = pair.leg2;
+      const rName = m.roundName?.roundName || "";
+      if (rName.includes("Lượt đi")) {
+        pairsMap[key].leg1 = m;
+      } else if (rName.includes("Lượt về")) {
+        pairsMap[key].leg2 = m;
       } else {
-        if (!sf1.teamA) {
-          sf1.teamA = pair.teamA;
-          sf1.teamB = pair.teamB;
-          sf1.leg1 = pair.leg1;
-          sf1.leg2 = pair.leg2;
-        } else if (!sf2.teamA) {
-          sf2.teamA = pair.teamA;
-          sf2.teamB = pair.teamB;
-          sf2.leg1 = pair.leg1;
-          sf2.leg2 = pair.leg2;
+        if (!pairsMap[key].leg1) {
+          pairsMap[key].leg1 = m;
+        } else {
+          pairsMap[key].leg2 = m;
         }
       }
     });
+    return Object.values(pairsMap);
+  };
 
-    // Finals mapping (Round 8 and 9 matches)
-    const finalMatches = knockoutMatches.filter((m) => m.round === 8 || m.round === 9);
-    let finalPair = {
-      title: "Chung kết",
-      placeholderA: "Thắng Bán kết 1",
-      placeholderB: "Thắng Bán kết 2",
-      teamA: null,
-      teamB: null,
-      leg1: null,
-      leg2: null,
-    };
-
-    if (finalMatches.length > 0) {
-      const firstMatch = finalMatches[0];
-      finalPair.teamA = firstMatch.homeTeam;
-      finalPair.teamB = firstMatch.awayTeam;
-      finalPair.leg1 = finalMatches.find((m) => m.round === 8) || null;
-      finalPair.leg2 = finalMatches.find((m) => m.round === 9) || null;
-    }
+  // If a specific tournament is selected, render its detail view
+  if (selectedTournament) {
+    const isCup = selectedTournament.type === "CUP";
 
     return (
       <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -431,6 +364,14 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && isCup && (
+              <button
+                onClick={() => onConfigureKnockoutStages(selectedTournament)}
+                className="inline-flex items-center gap-2 bg-[#0c1726] hover:bg-slate-800 text-white font-semibold px-4 py-2.5 rounded-xl text-xs shadow-xs transition-all cursor-pointer"
+              >
+                Cấu hình Knockout
+              </button>
+            )}
             <span className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold border ${selectedTournament.status === "COMPLETED"
               ? "bg-blue-50 text-blue-700 border-blue-200"
               : selectedTournament.status === "ONGOING"
@@ -641,70 +582,57 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
                   <h3 className="text-lg font-bold text-slate-900">Sơ đồ thi đấu vòng loại trực tiếp (Knockout Bracket)</h3>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-4">
-                  {/* Column 1: Semi-Finals */}
-                  <div className="lg:col-span-5 space-y-8 flex flex-col justify-center h-full">
-                    <div className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-100 pb-1 flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" /> Vòng Bán kết (Lượt đi & Lượt về)
-                    </div>
-                    {renderKnockoutCard(sf1)}
-                    {renderKnockoutCard(sf2)}
+                {loadingStages ? (
+                  <div className="text-center py-20 flex flex-col items-center justify-center gap-3">
+                    <Spin size="large" />
+                    <span className="text-slate-500 font-semibold text-sm">Đang tải sơ đồ thi đấu...</span>
                   </div>
-
-                  {/* Column 2: Visual Connectors */}
-                  <div className="hidden lg:flex lg:col-span-2 flex-col justify-center items-center h-full space-y-36">
-                    <div className="flex items-center w-full justify-between px-4">
-                      <div className="h-0.5 bg-slate-200 flex-1"></div>
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mx-1"></div>
-                      <div className="h-0.5 bg-slate-200 flex-1"></div>
-                    </div>
-                    <div className="flex items-center w-full justify-between px-4">
-                      <div className="h-0.5 bg-slate-200 flex-1"></div>
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mx-1"></div>
-                      <div className="h-0.5 bg-slate-200 flex-1"></div>
-                    </div>
+                ) : knockoutStagesList.length === 0 ? (
+                  <div className="text-center py-16 text-slate-400 font-medium text-sm border border-dashed border-slate-200 rounded-3xl bg-white flex flex-col items-center justify-center gap-2">
+                    <Trophy className="w-10 h-10 text-slate-350" />
+                    <span>Chưa có cấu hình vòng loại trực tiếp cho giải đấu này.</span>
                   </div>
+                ) : (
+                  <div className="flex flex-row overflow-x-auto gap-8 pt-4 pb-4 scrollbar-thin scrollbar-thumb-slate-200">
+                    {knockoutStagesList.map((stage) => {
+                      const stageMatches = matches.filter((m) => {
+                        const mTourId = typeof m.tournamentId === "object" ? m.tournamentId?._id : m.tournamentId;
+                        const mStageId = m.roundName?.knockoutStageId || m.roundName;
+                        const targetStageId = typeof mStageId === "object" ? mStageId?._id || mStageId?.knockoutStageId : mStageId;
+                        return mTourId === selectedTournament._id && String(targetStageId) === String(stage._id);
+                      });
 
-                  {/* Column 3: Finals */}
-                  <div className="lg:col-span-5 flex flex-col justify-center h-full space-y-4">
-                    <div className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2 border-b border-slate-100 pb-1 flex items-center gap-1">
-                      <Trophy className="w-3.5 h-3.5 text-amber-500" /> Chung kết (Lượt đi & Lượt về)
-                    </div>
-                    {renderKnockoutCard(finalPair)}
+                      const pairs = getPairsForStage(stageMatches);
 
-                    {/* Vô địch / Champion trophy display */}
-                    {(() => {
-                      const leg1 = finalPair.leg1;
-                      const leg2 = finalPair.leg2;
-                      const t1Id = finalPair.teamA?._id;
-                      const t2Id = finalPair.teamB?._id;
-                      const score1 = getMatchScore(leg1, t1Id, t2Id);
-                      const score2 = getMatchScore(leg2, t1Id, t2Id);
+                      return (
+                        <div key={stage._id} className="flex-1 min-w-[280px] max-w-[340px] space-y-6 shrink-0">
+                          <div className="text-xs font-black text-slate-500 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2 flex items-center gap-1.5">
+                            <Trophy className="w-4 h-4 text-emerald-600" />
+                            {stage.name}
+                          </div>
 
-                      const isFinished = leg2?.status === "FINISHED";
-                      if (isFinished && finalPair.teamA && finalPair.teamB) {
-                        const aggA = (score1.t1 || 0) + (score2.t1 || 0);
-                        const aggB = (score1.t2 || 0) + (score2.t2 || 0);
-                        const winner = aggA > aggB ? finalPair.teamA : aggA < aggB ? finalPair.teamB : null;
-
-                        if (winner) {
-                          return (
-                            <div className="mt-4 bg-gradient-to-r from-amber-50 to-yellow-100 border border-amber-200 rounded-2xl p-4 flex items-center gap-4.5 shadow-sm">
-                              <div className="w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-white shadow shadow-amber-500/25">
-                                <Trophy className="w-6.5 h-6.5 stroke-[2]" />
+                          <div className="space-y-6">
+                            {pairs.length === 0 ? (
+                              <div className="text-center py-12 bg-white border border-dashed border-gray-200 rounded-2xl text-slate-400 text-xs">
+                                Chưa có trận đấu nào được lên lịch.
                               </div>
-                              <div>
-                                <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-wider">Đội Vô Địch</h4>
-                                <p className="text-lg font-black text-slate-900">{winner.name} ({winner.shortName})</p>
-                              </div>
-                            </div>
-                          );
-                        }
-                      }
-                      return null;
-                    })()}
+                            ) : (
+                              pairs.map((p, idx) => renderKnockoutCard({
+                                title: `${stage.name} - Cặp ${idx + 1}`,
+                                teamA: p.teamA,
+                                teamB: p.teamB,
+                                leg1: p.leg1,
+                                leg2: p.leg2,
+                                placeholderA: `Đội tuyển A`,
+                                placeholderB: `Đội tuyển B`,
+                              }))
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>

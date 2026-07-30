@@ -7,7 +7,7 @@ import RecentActivity from "../components/dashboard/RecentActivity";
 import CreateMatchModal from "../components/admin/modals/CreateMatchModal";
 import LiveControlDrawer from "../components/admin/modals/LiveControlDrawer";
 import ExportStatsModal from "../components/admin/modals/ExportStatsModal";
-import { fetchDashboardOverview, fetchPersons, updateTeam, createTeam, createStadium, updateStadium, createPerson, updatePerson, createTournament, updateTournament } from "../api";
+import { fetchDashboardOverview, fetchPersons, updateTeam, createTeam, createStadium, updateStadium, createPerson, updatePerson, createTournament, updateTournament, syncKnockoutStages } from "../api";
 import { Download, Plus, Trophy, Tv, Users, Cloud, RefreshCw, Search, Pencil, Upload } from "lucide-react";
 import { Modal, message, Input } from "antd";
 import { LeaguesView, TeamsView, StadiumsView, PersonnelView, LiveControlView, PageHeader, PredictionsView } from "../components/admin";
@@ -15,6 +15,7 @@ import TeamEditModal from "../components/admin/modals/TeamEditModal";
 import StadiumModal from "../components/admin/modals/StadiumModal";
 import PersonModal from "../components/admin/modals/PersonModal";
 import TournamentModal from "../components/admin/modals/TournamentModal";
+import KnockoutStagesModal from "../components/admin/modals/KnockoutStagesModal";
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -40,6 +41,8 @@ const AdminPage = () => {
   const [editingStadium, setEditingStadium] = useState(null);
   const [isTournamentModalOpen, setIsTournamentModalOpen] = useState(false);
   const [editingTournament, setEditingTournament] = useState(null);
+  const [isKnockoutModalOpen, setIsKnockoutModalOpen] = useState(false);
+  const [selectedKnockoutTournament, setSelectedKnockoutTournament] = useState(null);
   const [tournamentForm, setTournamentForm] = useState({
     name: "",
     season: "2026",
@@ -281,6 +284,24 @@ const AdminPage = () => {
     }
   };
 
+  const openKnockoutModal = (tournament) => {
+    setSelectedKnockoutTournament(tournament);
+    setIsKnockoutModalOpen(true);
+  };
+
+  const handleKnockoutSubmit = async (payload) => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      await syncKnockoutStages(selectedKnockoutTournament._id, payload.stages, token);
+      message.success("Cấu hình vòng loại trực tiếp thành công!");
+      await loadDataFromDB();
+      setIsKnockoutModalOpen(false);
+      setSelectedKnockoutTournament(null);
+    } catch (error) {
+      message.error(error?.response?.data?.message || "Không thể lưu cấu hình");
+    }
+  };
+
   const handleStadiumImageUpload = async (file) => {
     const formData = new FormData();
     formData.append("image", file);
@@ -444,6 +465,7 @@ const AdminPage = () => {
             onBack={() => setActiveTab("dashboard")}
             onAddTournament={() => openTournamentModal(null)}
             onEditTournament={openTournamentModal}
+            onConfigureKnockoutStages={openKnockoutModal}
           />
         </div>
 
@@ -458,6 +480,16 @@ const AdminPage = () => {
           onFieldChange={(field, value) => setTournamentForm((prev) => ({ ...prev, [field]: value }))}
           teams={data.teams}
           editingTournament={editingTournament}
+        />
+
+        <KnockoutStagesModal
+          visible={isKnockoutModalOpen}
+          onCancel={() => {
+            setIsKnockoutModalOpen(false);
+            setSelectedKnockoutTournament(null);
+          }}
+          onOk={handleKnockoutSubmit}
+          tournament={selectedKnockoutTournament}
         />
       </div>
     );
