@@ -69,6 +69,13 @@ export const updateTournament = async (id, tournamentData, token) => {
   return res.data;
 };
 
+export const deleteTournament = async (id, token) => {
+  const res = await api.delete(`/tournaments/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
 export const fetchKnockoutStages = async (tournamentId) => {
   const res = await api.get(`/knockout-stages/tournament/${tournamentId}`);
   return res.data;
@@ -237,6 +244,15 @@ export const fetchCardStatistics = async (tournamentId) => {
 export const fetchRoundNames = async (tournamentId) => {
   const url = tournamentId ? `/round-names-tournament?tournamentId=${tournamentId}` : "/round-names-tournament";
   const res = await api.get(url);
+  return res.data;
+};
+
+export const uploadImage = async (formData) => {
+  const res = await api.post("/teams/upload-image", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return res.data;
 };
 

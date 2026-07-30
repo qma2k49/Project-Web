@@ -7,7 +7,7 @@ import RecentActivity from "../components/dashboard/RecentActivity";
 import CreateMatchModal from "../components/admin/modals/CreateMatchModal";
 import LiveControlDrawer from "../components/admin/modals/LiveControlDrawer";
 import ExportStatsModal from "../components/admin/modals/ExportStatsModal";
-import { fetchDashboardOverview, fetchPersons, updateTeam, createTeam, createStadium, updateStadium, createPerson, updatePerson, createTournament, updateTournament, syncKnockoutStages } from "../api";
+import { fetchDashboardOverview, fetchPersons, updateTeam, createTeam, createStadium, updateStadium, createPerson, updatePerson, createTournament, updateTournament, syncKnockoutStages, uploadImage, deleteTournament } from "../api";
 import { Download, Plus, Trophy, Tv, Users, Cloud, RefreshCw, Search, Pencil, Upload } from "lucide-react";
 import { Modal, message, Input } from "antd";
 import { LeaguesView, TeamsView, StadiumsView, PersonnelView, LiveControlView, PageHeader, PredictionsView } from "../components/admin";
@@ -172,16 +172,7 @@ const AdminPage = () => {
 
     try {
       setUploadingImage(true);
-      const response = await fetch("http://localhost:3000/api/teams/upload-image", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.message || "Không thể tải ảnh lên");
-      }
-
+      const result = await uploadImage(formData);
       setEditTeamForm((prev) => ({ ...prev, logo: result.imageUrl }));
       message.success("Tải ảnh logo thành công");
     } catch (error) {
@@ -284,6 +275,17 @@ const AdminPage = () => {
     }
   };
 
+  const handleDeleteTournament = async (tournamentId) => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      await deleteTournament(tournamentId, token);
+      message.success("Xóa giải đấu thành công!");
+      await loadDataFromDB();
+    } catch (error) {
+      message.error(error?.response?.data?.message || "Không thể xóa giải đấu");
+    }
+  };
+
   const openKnockoutModal = (tournament) => {
     setSelectedKnockoutTournament(tournament);
     setIsKnockoutModalOpen(true);
@@ -308,12 +310,7 @@ const AdminPage = () => {
 
     try {
       setUploadingStadiumImage(true);
-      const response = await fetch("http://localhost:3000/api/teams/upload-image", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result?.message || "Không thể tải ảnh lên");
+      const result = await uploadImage(formData);
       setStadiumForm((prev) => ({ ...prev, image: result.imageUrl }));
       message.success("Tải ảnh sân vận động thành công");
     } catch (error) {
@@ -367,12 +364,7 @@ const AdminPage = () => {
 
     try {
       setUploadingPersonImage(true);
-      const response = await fetch("http://localhost:3000/api/teams/upload-image", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result?.message || "Không thể tải ảnh lên");
+      const result = await uploadImage(formData);
       setPersonForm((prev) => ({ ...prev, avatar: result.imageUrl }));
       message.success("Tải ảnh nhân sự thành công");
     } catch (error) {
@@ -466,6 +458,7 @@ const AdminPage = () => {
             onAddTournament={() => openTournamentModal(null)}
             onEditTournament={openTournamentModal}
             onConfigureKnockoutStages={openKnockoutModal}
+            onDeleteTournament={handleDeleteTournament}
           />
         </div>
 

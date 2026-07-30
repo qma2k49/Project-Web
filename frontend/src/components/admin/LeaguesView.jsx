@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "./PageHeader";
 import { fetchTeamStandings, fetchKnockoutStages } from "../../api";
-import { Trophy, Calendar, Users, ArrowLeft, Shield, AlertCircle, Sparkles, Pencil } from "lucide-react";
-import { Spin } from "antd";
+import { Trophy, Calendar, Users, ArrowLeft, Shield, AlertCircle, Sparkles, Pencil, Trash2 } from "lucide-react";
+import { Spin, Modal } from "antd";
 import MatchLineupModal from "./modals/MatchLineupModal";
 import LiveClock from "./LiveClock";
 
@@ -67,6 +67,18 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
       setKnockoutStagesList([]);
     }
   }, [selectedTournament]);
+
+  // Sync selectedTournament state with tournaments prop when it updates
+  useEffect(() => {
+    if (selectedTournament) {
+      const found = tournaments.find((t) => String(t._id) === String(selectedTournament._id));
+      if (!found) {
+        setSelectedTournament(null);
+      } else {
+        setSelectedTournament(found);
+      }
+    }
+  }, [tournaments, selectedTournament]);
 
   // Fallback / dynamic calculation of standings from matches
   const getStandingsForGroup = (groupName, groupTeams) => {
