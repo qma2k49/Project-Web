@@ -107,6 +107,13 @@ export const createTeam = async (teamData, token) => {
   return res.data;
 };
 
+export const deleteTeam = async (teamId, token) => {
+  const res = await api.delete(`/teams/${teamId}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return res.data;
+};
+
 export const fetchStadiums = async () => {
   const res = await api.get("/stadiums");
   return res.data?.data || res.data;

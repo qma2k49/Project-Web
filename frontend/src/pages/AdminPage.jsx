@@ -7,7 +7,7 @@ import RecentActivity from "../components/dashboard/RecentActivity";
 import CreateMatchModal from "../components/admin/modals/CreateMatchModal";
 import LiveControlDrawer from "../components/admin/modals/LiveControlDrawer";
 import ExportStatsModal from "../components/admin/modals/ExportStatsModal";
-import { fetchDashboardOverview, fetchPersons, updateTeam, createTeam, createStadium, updateStadium, createPerson, updatePerson, createTournament, updateTournament, syncKnockoutStages, uploadImage, deleteTournament } from "../api";
+import { fetchDashboardOverview, fetchPersons, updateTeam, createTeam, createStadium, updateStadium, createPerson, updatePerson, createTournament, updateTournament, syncKnockoutStages, uploadImage, deleteTournament, deleteTeam } from "../api";
 import { Download, Plus, Trophy, Tv, Users, Cloud, RefreshCw, Search, Pencil, Upload } from "lucide-react";
 import { Modal, message, Input } from "antd";
 import { LeaguesView, TeamsView, StadiumsView, PersonnelView, LiveControlView, PageHeader, PredictionsView } from "../components/admin";
@@ -310,6 +310,17 @@ const AdminPage = () => {
     }
   };
 
+  const handleDeleteTeam = async (teamId) => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      await deleteTeam(teamId, token);
+      message.success("Xóa đội bóng thành công!");
+      await loadDataFromDB();
+    } catch (error) {
+      message.error(error?.response?.data?.message || "Không thể xóa đội bóng");
+    }
+  };
+
   const openKnockoutModal = (tournament) => {
     setSelectedKnockoutTournament(tournament);
     setIsKnockoutModalOpen(true);
@@ -592,8 +603,8 @@ const AdminPage = () => {
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             filteredTeams={filteredTeams}
-            selectedTeam={selectedTeam}
             onEditTeam={openTeamModal}
+            onDeleteTeam={handleDeleteTeam}
             onBack={() => setActiveTab("dashboard")}
             data={data}
             onAddTeam={() => openTeamModal(null)}

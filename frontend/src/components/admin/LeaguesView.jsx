@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "./PageHeader";
 import { fetchTeamStandings, fetchKnockoutStages } from "../../api";
-import { Trophy, Calendar, Users, ArrowLeft, Shield, AlertCircle, Sparkles, Pencil, Trash2 } from "lucide-react";
-import { Spin, Modal } from "antd";
+import { Trophy, Calendar, Users, ArrowLeft, Shield, AlertCircle, Sparkles, Pencil, Trash2, Search } from "lucide-react";
+import { Spin, Modal, Input } from "antd";
 import MatchLineupModal from "./modals/MatchLineupModal";
 import LiveClock from "./LiveClock";
 
@@ -16,6 +16,7 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
   const [isLineupModalOpen, setIsLineupModalOpen] = useState(false);
   const [knockoutStagesList, setKnockoutStagesList] = useState([]);
   const [loadingStages, setLoadingStages] = useState(false);
+  const [leagueSearchTerm, setLeagueSearchTerm] = useState("");
 
   const handleOpenLineupModal = (match) => {
     setSelectedLineupMatch(match);
@@ -826,6 +827,13 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
     );
   }
 
+  const filteredTournaments = (tournaments || []).filter((tournament) => {
+    const keyword = leagueSearchTerm.toLowerCase();
+    return !keyword || [tournament.name, tournament.season, tournament.type]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(keyword));
+  });
+
   // Original list of tournaments
   return (
     <main className="flex-1 p-8 max-w-7xl w-full mx-auto space-y-6">
@@ -846,6 +854,20 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
         }
       />
 
+      {/* Tournament Search Box */}
+      <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <label className="text-sm font-semibold text-slate-700">Tìm kiếm giải đấu</label>
+        <Input
+          size="large"
+          prefix={<Search className="w-4 h-4 text-slate-400" />}
+          placeholder="Nhập tên giải đấu, mùa giải (ví dụ: 2026) hoặc thể thức (CUP, LEAGUE) để lọc..."
+          value={leagueSearchTerm}
+          onChange={(e) => setLeagueSearchTerm(e.target.value)}
+          allowClear
+          className="mt-2"
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {loading ? (
           <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-gray-200 bg-white p-20 text-center flex flex-col items-center justify-center gap-3">
@@ -854,11 +876,16 @@ const LeaguesView = ({ loading, tournaments, matches, teams, stadiums, players =
           </div>
         ) : tournaments.length === 0 ? (
           <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
-            <AlertCircle className="w-8 h-8 text-slate-300" />
+            <AlertCircle className="w-8 h-8 text-slate-350" />
             <span className="text-sm font-semibold">Chưa có giải đấu nào trong cơ sở dữ liệu.</span>
           </div>
+        ) : filteredTournaments.length === 0 ? (
+          <div className="md:col-span-2 xl:col-span-3 rounded-2xl border border-dashed border-gray-300 bg-white p-12 text-center text-slate-450 flex flex-col items-center justify-center gap-2">
+            <AlertCircle className="w-8 h-8 text-slate-350" />
+            <span className="text-sm font-semibold">Không tìm thấy giải đấu phù hợp với từ khóa của bạn.</span>
+          </div>
         ) : (
-          tournaments.map((tournament) => (
+          filteredTournaments.map((tournament) => (
             <div
               key={tournament._id}
               onClick={() => setSelectedTournament(tournament)}
