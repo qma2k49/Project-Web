@@ -71,7 +71,7 @@ Project-Web/
    ```env
    PORT = 3000
    DB_URL = mongodb://<user>:<password>@<cluster-url>/<db-name>?ssl=true&authSource=admin
-   JWT_SECRET = <khoa_bi_mat_jwt_cua_ban>
+   JWT_SECRET = brian2k5pbc
    CLOUDINARY_CLOUD_NAME = o8xqqn0e
    CLOUDINARY_API_KEY = 663982843822484
    CLOUDINARY_API_SECRET = wN2hT6X--AryTEwWiY2Gww-Jq2E
