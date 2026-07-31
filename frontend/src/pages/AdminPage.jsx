@@ -60,7 +60,6 @@ const AdminPage = () => {
     country: "",
     image: "",
   });
-  const [uploadingStadiumImage, setUploadingStadiumImage] = useState(false);
   const [isPersonModalOpen, setIsPersonModalOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState(null);
   const [personForm, setPersonForm] = useState({
@@ -74,7 +73,6 @@ const AdminPage = () => {
     currentTeam: "",
     careerSummary: "",
   });
-  const [uploadingPersonImage, setUploadingPersonImage] = useState(false);
   const [playerSearchTerm, setPlayerSearchTerm] = useState("");
   const [coachSearchTerm, setCoachSearchTerm] = useState("");
   const [editTeamForm, setEditTeamForm] = useState({
@@ -87,6 +85,8 @@ const AdminPage = () => {
     coachName: "",
     logo: "",
   });
+  const [uploadingStadiumImage, setUploadingStadiumImage] = useState(false);
+  const [uploadingPersonImage, setUploadingPersonImage] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const loadDataFromDB = async () => {
@@ -140,20 +140,12 @@ const AdminPage = () => {
 
   const handleEditTeamSubmit = async () => {
     try {
-      const payload = {
-        ...editTeamForm,
-        logo: editTeamForm.logo || editingTeam?.logo || "",
-        image: editTeamForm.logo || editingTeam?.logo || "",
-      };
-
-      if (!payload.logo) {
-        delete payload.logo;
-        delete payload.image;
-      }
+      const logo = editTeamForm.logo?.trim() || editingTeam?.logo || "";
+      const payload = { ...editTeamForm, logo, image: logo };
 
       const token = localStorage.getItem("token") || "";
       const response = editingTeam && editingTeam._id
-        ? await updateTeam(editingTeam._id, payload)
+        ? await updateTeam(editingTeam._id, payload, token)
         : await createTeam(payload, token);
 
       message.success(editingTeam && editingTeam._id ? "Cập nhật thông tin đội bóng thành công!" : "Thêm đội bóng mới thành công!");
@@ -179,6 +171,38 @@ const AdminPage = () => {
       message.error(error?.message || "Không thể tải ảnh lên");
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  const handleStadiumImageUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      setUploadingStadiumImage(true);
+      const result = await uploadImage(formData);
+      setStadiumForm((prev) => ({ ...prev, image: result.imageUrl }));
+      message.success("Tải ảnh sân vận động thành công");
+    } catch (error) {
+      message.error(error?.message || "Không thể tải ảnh lên");
+    } finally {
+      setUploadingStadiumImage(false);
+    }
+  };
+
+  const handlePersonImageUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      setUploadingPersonImage(true);
+      const result = await uploadImage(formData);
+      setPersonForm((prev) => ({ ...prev, avatar: result.imageUrl }));
+      message.success("Tải ảnh nhân sự thành công");
+    } catch (error) {
+      message.error(error?.message || "Không thể tải ảnh lên");
+    } finally {
+      setUploadingPersonImage(false);
     }
   };
 
@@ -304,21 +328,6 @@ const AdminPage = () => {
     }
   };
 
-  const handleStadiumImageUpload = async (file) => {
-    const formData = new FormData();
-    formData.append("image", file);
-
-    try {
-      setUploadingStadiumImage(true);
-      const result = await uploadImage(formData);
-      setStadiumForm((prev) => ({ ...prev, image: result.imageUrl }));
-      message.success("Tải ảnh sân vận động thành công");
-    } catch (error) {
-      message.error(error?.message || "Không thể tải ảnh lên");
-    } finally {
-      setUploadingStadiumImage(false);
-    }
-  };
 
   const openPersonModal = (person = null) => {
     setEditingPerson(person);
@@ -358,21 +367,6 @@ const AdminPage = () => {
     }
   };
 
-  const handlePersonImageUpload = async (file) => {
-    const formData = new FormData();
-    formData.append("image", file);
-
-    try {
-      setUploadingPersonImage(true);
-      const result = await uploadImage(formData);
-      setPersonForm((prev) => ({ ...prev, avatar: result.imageUrl }));
-      message.success("Tải ảnh nhân sự thành công");
-    } catch (error) {
-      message.error(error?.message || "Không thể tải ảnh lên");
-    } finally {
-      setUploadingPersonImage(false);
-    }
-  };
 
   const handleClearHistoryConfirm = () => {
     Modal.confirm({

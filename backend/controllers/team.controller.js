@@ -17,7 +17,7 @@ const teamController = {
                 country,
                 homeStadium,
                 coachName,
-                coach,
+                ...(coach && String(coach).trim() !== '' && { coach }),
                 logo: image
             });
 
@@ -32,10 +32,7 @@ const teamController = {
 
     getAllTeams: async (req, res) => {
         try {
-            let teams = await TeamModel.find();
-            if (teams.length === 0) {
-                teams = await TeamModel.insertMany(defaultSeedTeams);
-            }
+            const teams = await TeamModel.find();
             res.status(200).json(teams);
         } catch (error) {
             res.status(500).json({ message: 'Lỗi server', error: error.message });
@@ -76,7 +73,8 @@ const teamController = {
                     ...(country !== undefined && { country }),
                     ...(homeStadium !== undefined && { homeStadium }),
                     ...(coachName !== undefined && { coachName }),
-                    ...(coach !== undefined && { coach }),
+                    // Only update coach if a valid non-empty value is provided
+                    ...(coach !== undefined && coach !== null && String(coach).trim() !== '' && { coach }),
                     ...(logo !== undefined && { logo }),
                     ...(image !== undefined && { logo: image }),
                 },

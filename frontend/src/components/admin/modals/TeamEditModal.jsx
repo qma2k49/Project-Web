@@ -1,6 +1,6 @@
 import React from "react";
-import { Modal, Form, Input, Select, Upload as AntUpload } from "antd";
-import { Upload } from "lucide-react";
+import { Modal, Form, Input, Select, Upload as AntUpload, Button } from "antd";
+import { Link, Upload } from "lucide-react";
 
 const TeamEditModal = ({
   visible,
@@ -84,27 +84,40 @@ const TeamEditModal = ({
             filterOption={(input, option) => (option?.label ?? "").toLowerCase().includes(input.toLowerCase())}
           />
         </Form.Item>
-        <Form.Item label="Logo đội bóng">
+        <Form.Item label={<span className="flex items-center gap-1.5"><Link className="w-3.5 h-3.5" /> Logo đội bóng</span>}>
           <div className="space-y-3">
-            {form.logo ? (
-              <img src={form.logo} alt="Team logo" className="h-20 w-20 rounded-xl object-cover border border-slate-200" />
-            ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-400">
-                <Upload className="h-6 w-6" />
+            <div className="flex gap-2">
+              <Input
+                value={form.logo}
+                onChange={(e) => onFieldChange("logo", e.target.value)}
+                placeholder="Dán link ảnh hoặc tải lên..."
+                prefix={<Link className="w-3.5 h-3.5 text-slate-400" />}
+                allowClear
+                className="flex-1"
+              />
+              <AntUpload
+                beforeUpload={(file) => {
+                  onImageUpload(file);
+                  return false;
+                }}
+                showUploadList={false}
+              >
+                <Button icon={<Upload className="w-4 h-4 mr-1 inline" />} loading={uploadingImage}>
+                  Tải lên
+                </Button>
+              </AntUpload>
+            </div>
+            {form.logo && (
+              <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                <img
+                  src={form.logo}
+                  alt="Preview"
+                  className="h-12 w-12 rounded-lg object-cover border border-slate-200 bg-white"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+                <span className="text-xs text-slate-500 truncate flex-1">{form.logo}</span>
               </div>
             )}
-            <AntUpload beforeUpload={(file) => {
-              onImageUpload(file);
-              return false;
-            }} showUploadList={false}>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700"
-                disabled={uploadingImage}
-              >
-                {uploadingImage ? "Đang tải..." : "Tải ảnh lên"}
-              </button>
-            </AntUpload>
           </div>
         </Form.Item>
       </Form>

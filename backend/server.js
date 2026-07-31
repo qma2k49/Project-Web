@@ -25,37 +25,12 @@ import knockoutStageRouter from './routes/knockoutStage.route.js';
 
 dotenv.config();
 
+import { upload } from './middlewares/upload.middleware.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
-
-import fs from 'fs';
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, 'uploads', 'teams');
-    fs.mkdirSync(uploadDir, { recursive: true });
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${uniqueSuffix}${path.extname(file.originalname)}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Chỉ hỗ trợ ảnh JPG/PNG/WebP'));
-    }
-  },
-});
 
 // Enable Socket.io Server
 const io = new Server(server, {
@@ -78,7 +53,14 @@ app.post('/api/teams/upload-image', upload.single('image'), (req, res) => {
     return res.status(400).json({ message: 'Không có ảnh được tải lên' });
   }
 
-  const imageUrl = `${req.protocol}://${req.get('host')}/uploads/teams/${req.file.filename}`;
+  // If Cloudinary uploaded successfully, path is the remote HTTP/HTTPS URL
+  let imageUrl = req.file.path || req.file.secure_url;
+  
+  if (!imageUrl || (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://'))) {
+    // Fallback if local storage was used
+    imageUrl = `${req.protocol}://${req.get('host')}/uploads/teams/${req.file.filename}`;
+  }
+
   res.status(200).json({ imageUrl });
 });
 

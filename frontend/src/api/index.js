@@ -93,8 +93,10 @@ export const fetchTeams = async () => {
   return res.data?.teams || res.data?.data || res.data;
 };
 
-export const updateTeam = async (teamId, teamData) => {
-  const res = await api.put(`/teams/${teamId}`, teamData);
+export const updateTeam = async (teamId, teamData, token) => {
+  const res = await api.put(`/teams/${teamId}`, teamData, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   return res.data;
 };
 
