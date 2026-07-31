@@ -32,7 +32,7 @@ const AdminSidebar = ({ activeTab = "dashboard", onTabChange }) => {
             <Trophy className="w-5 h-5 text-slate-900 stroke-[2.5]" />
           </div>
           <span className="font-extrabold text-xl tracking-tight text-slate-900">
-            QLBongDa
+            Football Zone
           </span>
         </div>
 
